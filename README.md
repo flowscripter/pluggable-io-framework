@@ -46,7 +46,10 @@ Add the module:
 Discover and use a provider:
 
 ```typescript
-import { DefaultPluginManager, LocalFolderPluginRepository } from "@flowscripter/dynamic-plugin-framework";
+import {
+  DefaultPluginManager,
+  LocalFolderPluginRepository,
+} from "@flowscripter/dynamic-plugin-framework";
 import { ProviderRegistry, copy } from "@flowscripter/pluggable-io-framework";
 
 const pluginManager = new DefaultPluginManager([new LocalFolderPluginRepository("./plugins")]);
