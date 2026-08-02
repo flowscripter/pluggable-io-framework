@@ -1,7 +1,7 @@
 {
   "name": "@flowscripter/pluggable-io-framework",
   "version": "0.1.0",
-  "description": "Pluggable source/sink IO framework - provider discovery, copy/move orchestration, decorators, telemetry",
+  "description": "A pluggable source/sink IO framework using https://github.com/flowscripter/dynamic-plugin-framework",
   "keywords": [
     "bun",
     "io",
