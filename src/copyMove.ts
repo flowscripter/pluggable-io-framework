@@ -1,8 +1,11 @@
-import type {
-  ChunkRef,
-  IOProvider,
-  Part,
-  TelemetryHooks,
+import {
+  adaptReadableStream,
+  identityChunkConverter,
+  type ChunkConverter,
+  type ChunkRef,
+  type IOProvider,
+  type Part,
+  type TelemetryHooks,
 } from "@flowscripter/pluggable-io-framework-api";
 import { chunkLength } from "./chunkLength.ts";
 
@@ -10,6 +13,13 @@ export interface TransferOptions {
   readonly telemetry?: TelemetryHooks;
   /** Minimum file size (bytes) before multipart transfer is attempted over plain streaming. */
   readonly multipartThreshold?: number;
+  /**
+   * Required only when `source.kind !== sink.kind` - pure-TS code can only
+   * convert chunks already of the target kind (see
+   * `identityChunkConverter`); a real js<->native conversion needs an
+   * FFI-capable converter supplied by a runtime-specific package.
+   */
+  readonly chunkConverter?: ChunkConverter;
 }
 
 const DEFAULT_MULTIPART_THRESHOLD = 64 * 1024 * 1024;
@@ -20,12 +30,19 @@ async function streamingTransfer(
   sink: IOProvider,
   destPath: string,
   operationId: string,
-  telemetry: TelemetryHooks | undefined,
+  options: TransferOptions,
   totalBytes: number | undefined,
 ): Promise<void> {
   const readable = await source.getReadableStream(sourcePath);
   const writable = await sink.getWritableStream(destPath);
-  const reader = (readable.stream as ReadableStream<ChunkRef>).getReader();
+  // The source/sink kind mismatch is decided ONCE here, not per chunk.
+  const adaptedStream = adaptReadableStream(
+    readable.stream as ReadableStream<ChunkRef>,
+    readable.kind,
+    writable.kind,
+    options.chunkConverter ?? identityChunkConverter,
+  );
+  const reader = adaptedStream.getReader();
   const writer = (writable.stream as WritableStream<ChunkRef>).getWriter();
   let bytesProcessed = 0;
   try {
@@ -34,7 +51,7 @@ async function streamingTransfer(
       if (done) break;
       await writer.write(value);
       bytesProcessed += chunkLength(value);
-      telemetry?.onProgress?.({ operationId, type: "copy", bytesProcessed, totalBytes });
+      options.telemetry?.onProgress?.({ operationId, type: "copy", bytesProcessed, totalBytes });
     }
     await writer.close();
   } catch (error) {
@@ -49,25 +66,33 @@ async function multipartTransfer(
   sink: IOProvider,
   destPath: string,
   operationId: string,
-  telemetry: TelemetryHooks | undefined,
+  options: TransferOptions,
   totalBytes: number | undefined,
 ): Promise<void> {
   let bytesProcessed = 0;
   const writer = sink.getMultipartWriter(destPath);
   async function* transferParts(): AsyncIterable<Part> {
     for await (const part of source.getMultipartReader(sourcePath)) {
-      const reader = (part.stream as ReadableStream<ChunkRef>).getReader();
+      // Kind mismatch decided once per part, not once per chunk within it.
+      const adaptedStream = adaptReadableStream(
+        part.stream as ReadableStream<ChunkRef>,
+        part.kind,
+        sink.kind,
+        options.chunkConverter ?? identityChunkConverter,
+      );
+      const reader = adaptedStream.getReader();
       const chunks: ChunkRef[] = [];
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         chunks.push(value);
         bytesProcessed += chunkLength(value);
-        telemetry?.onProgress?.({ operationId, type: "copy", bytesProcessed, totalBytes });
+        options.telemetry?.onProgress?.({ operationId, type: "copy", bytesProcessed, totalBytes });
       }
       yield {
         index: part.index,
         offset: part.offset,
+        kind: sink.kind,
         stream: new ReadableStream<ChunkRef>({
           start(controller) {
             for (const chunk of chunks) controller.enqueue(chunk);
@@ -124,7 +149,7 @@ export async function copy(
       sink,
       destPath,
       operationId,
-      options.telemetry,
+      options,
       properties.size,
     );
     return;
@@ -135,7 +160,7 @@ export async function copy(
     sink,
     destPath,
     operationId,
-    options.telemetry,
+    options,
     properties.size,
   );
 }
