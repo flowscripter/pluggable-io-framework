@@ -1,0 +1,126 @@
+# pluggable-io-framework
+
+[![version](https://img.shields.io/github/v/release/flowscripter/pluggable-io-framework?sort=semver)](https://github.com/flowscripter/pluggable-io-framework/releases)
+[![build](https://img.shields.io/github/actions/workflow/status/flowscripter/pluggable-io-framework/release-bun-library.yml)](https://github.com/flowscripter/pluggable-io-framework/actions/workflows/release-bun-library.yml)
+[![docs](https://img.shields.io/badge/docs-API-blue)](https://flowscripter.github.io/pluggable-io-framework/index.html)
+[![license: MIT](https://img.shields.io/github/license/flowscripter/pluggable-io-framework)](https://github.com/flowscripter/pluggable-io-framework/blob/main/LICENSE)
+
+> A pluggable source/sink IO framework - provider discovery, copy/move
+> orchestration and telemetry, for files and folders across different
+> backends (local filesystem, object storage, HTTP, etc.)
+
+## Key Features
+
+- Discovers and instantiates source/sink provider plugins (implementing the
+  `IOProviderFactory`/`IOProvider` contract from
+  [pluggable-io-framework-api](https://github.com/flowscripter/pluggable-io-framework-api))
+  via
+  [dynamic-plugin-framework](https://github.com/flowscripter/dynamic-plugin-framework),
+  including config validation against each plugin's Zod schema.
+- Copy/move orchestration:
+  - Uses a provider's `directCopy`/`directMove` when
+    `canDirectTransfer` reports the source and sink are the same
+    underlying provider (e.g. same filesystem mount, same object storage
+    bucket).
+  - Otherwise transfers via multipart (when both sides support it and file
+    size crosses a configurable threshold) or plain streaming.
+  - Reports progress via a global `TelemetryHooks` callback, tagged with a
+    per-operation correlation id.
+- Standalone today - usable directly or via the
+  [flowscripter-io-cli](https://github.com/flowscripter/flowscripter-io-cli)
+  built on
+  [dynamic-cli-framework](https://github.com/flowscripter/dynamic-cli-framework).
+  When the full Flowscripter graph runtime exists, an `adapt` operator will
+  wrap these providers to bridge them into the processing graph - that
+  wrapping is out of scope for this repo.
+- See
+  [pluggable-io-framework-plugin-filesystem](https://github.com/flowscripter/pluggable-io-framework-plugin-filesystem)
+  for a reference local filesystem source/sink plugin.
+
+## Bun Module Usage
+
+Add the module:
+
+`bun add @flowscripter/pluggable-io-framework`
+
+Discover and use a provider:
+
+```typescript
+import { DefaultPluginManager, LocalFolderPluginRepository } from "@flowscripter/dynamic-plugin-framework";
+import { ProviderRegistry, copy } from "@flowscripter/pluggable-io-framework";
+
+const pluginManager = new DefaultPluginManager([new LocalFolderPluginRepository("./plugins")]);
+const registry = new ProviderRegistry(pluginManager);
+await registry.discover();
+
+const [extension] = await registry.listAvailableProviders();
+const provider = await registry.createProvider(extension.extensionHandle, { rootPath: "/data" });
+
+await copy(provider, "a.txt", provider, "b.txt", {
+  telemetry: { onProgress: (event) => console.log(event) },
+});
+```
+
+## Development
+
+Install dependencies:
+
+`bun install`
+
+Build (produces `dist/` for Node.js and TypeScript consumers; Bun uses raw source directly):
+
+`bun run build`
+
+Test:
+
+`bun test`
+
+Format:
+
+`bunx oxfmt`
+
+Lint:
+
+`bunx oxlint index.ts src/ tests/`
+
+Generate HTML API Documentation:
+
+`bunx typedoc index.ts`
+
+## Documentation
+
+### Overview
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant ProviderRegistry
+    participant PluginManager
+    participant Source as IOProvider (source)
+    participant Sink as IOProvider (sink)
+
+    Host->>ProviderRegistry: discover()
+    ProviderRegistry->>PluginManager: registerExtensions(extensionPoint)
+    Host->>ProviderRegistry: createProvider(handle, config)
+    ProviderRegistry->>PluginManager: instantiate(handle)
+    ProviderRegistry-->>Host: IOProvider
+
+    Host->>Source: copy(source, path, sink, path)
+    alt canDirectTransfer
+        Source->>Sink: directCopy(path, path)
+    else multipart eligible
+        Source-->>Sink: transfer Parts concurrently
+    else
+        Source-->>Sink: stream ChunkRefs
+    end
+```
+
+### API
+
+Link to auto-generated API docs:
+
+[API Documentation](https://flowscripter.github.io/pluggable-io-framework/index.html)
+
+## License
+
+MIT © Flowscripter
