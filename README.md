@@ -25,7 +25,7 @@
   - Reports progress via a global `TelemetryHooks` callback, tagged with a
     per-operation correlation id.
 - See
-  [pluggable-io-framework-plugin-filesystem](https://github.com/flowscripter/pluggable-io-framework-plugin-filesystem)
+  [io-plugin-filesystem](https://github.com/flowscripter/io-plugin-filesystem)
   for a reference local filesystem source/sink plugin.
 
 ## Bun Module Usage
