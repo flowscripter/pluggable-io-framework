@@ -1,6 +1,6 @@
 {
   "name": "@flowscripter/pluggable-io-framework",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A pluggable source/sink IO framework using https://github.com/flowscripter/dynamic-plugin-framework",
   "keywords": [
     "bun",
