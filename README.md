@@ -55,6 +55,13 @@ await copy(provider, "a.txt", provider, "b.txt", {
 });
 ```
 
+## Usage Example
+
+The following example project is available:
+
+- [flowscripter-io-cli](https://github.com/flowscripter/flowscripter-io-cli) is
+  an example CLI application based on this framework.
+
 ## Development
 
 Install dependencies:
