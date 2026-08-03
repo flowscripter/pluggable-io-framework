@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import type {
+import {
   ChunkKind,
-  ChunkRef,
-  IOProvider,
-  JsChunk,
-  Part,
+  type ChunkRef,
+  type IOProvider,
+  type JsChunk,
+  type Part,
 } from "@flowscripter/pluggable-io-framework-api";
 import { copy, move } from "../src/copyMove.ts";
 
 function makeStreamingProvider(
   files: Map<string, Uint8Array>,
   id: string,
-  kind: ChunkKind = "js",
+  kind: ChunkKind = ChunkKind.Js,
 ): IOProvider {
   return {
     kind,
@@ -31,7 +31,7 @@ function makeStreamingProvider(
         kind,
         stream: new ReadableStream<JsChunk>({
           start(controller) {
-            controller.enqueue({ kind: "js", data });
+            controller.enqueue({ kind: ChunkKind.Js, data });
             controller.close();
           },
         }),
@@ -65,9 +65,9 @@ function makeStreamingProvider(
   };
 }
 
-function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<"js"> {
+function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<ChunkKind.Js> {
   return {
-    kind: "js",
+    kind: ChunkKind.Js,
     async [Symbol.asyncDispose]() {},
     async *list() {},
     async getProperties(path: string) {
@@ -81,16 +81,16 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<"js">
     async getReadableStream(path: string) {
       const data = files.get(path) ?? new Uint8Array();
       return {
-        kind: "js" as const,
+        kind: ChunkKind.Js,
         stream: new ReadableStream<JsChunk>({
-          start: (c) => (c.enqueue({ kind: "js", data }), c.close()),
+          start: (c) => (c.enqueue({ kind: ChunkKind.Js, data }), c.close()),
         }),
       };
     },
     async getWritableStream(path: string) {
       const chunks: Uint8Array[] = [];
       return {
-        kind: "js" as const,
+        kind: ChunkKind.Js,
         stream: new WritableStream<JsChunk>({
           write: (chunk) => {
             chunks.push(chunk.data);
@@ -107,12 +107,12 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<"js">
       const partsData = [data.subarray(0, half), data.subarray(half)];
       for (let index = 0; index < partsData.length; index += 1) {
         const partData = partsData[index] as Uint8Array;
-        const part: Part<"js"> = {
+        const part: Part<ChunkKind.Js> = {
           index,
           offset: index === 0 ? 0 : half,
-          kind: "js",
+          kind: ChunkKind.Js,
           stream: new ReadableStream<JsChunk>({
-            start: (c) => (c.enqueue({ kind: "js", data: partData }), c.close()),
+            start: (c) => (c.enqueue({ kind: ChunkKind.Js, data: partData }), c.close()),
           }),
           complete: async () => {},
         };
@@ -129,7 +129,7 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<"js">
             for (;;) {
               const { done, value } = await reader.read();
               if (done) break;
-              if (value.kind === "js") chunks.push(value.data);
+              if (value.kind === ChunkKind.Js) chunks.push(value.data);
             }
             collected.push({ offset: part.offset, data: Buffer.concat(chunks) });
             await part.complete();
@@ -205,7 +205,7 @@ describe("copy", () => {
   test("throws when source/sink kinds differ and no converter is supplied", async () => {
     const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
     const source = makeStreamingProvider(sourceFiles, "source");
-    const sink = makeStreamingProvider(new Map(), "sink", "native");
+    const sink = makeStreamingProvider(new Map(), "sink", ChunkKind.Native);
 
     let threw = false;
     try {
@@ -220,13 +220,13 @@ describe("copy", () => {
     const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
     const source = makeStreamingProvider(sourceFiles, "source");
     const sinkFiles = new Map<string, Uint8Array>();
-    const sink = makeStreamingProvider(sinkFiles, "sink", "native");
+    const sink = makeStreamingProvider(sinkFiles, "sink", ChunkKind.Native);
 
     let converterCalls = 0;
     await copy(source, "a.txt", sink, "b.txt", {
       chunkConverter: (chunk, toKind) => {
         converterCalls += 1;
-        expect(toKind).toBe("native");
+        expect(toKind).toBe(ChunkKind.Native);
         return chunk;
       },
     });
