@@ -1,10 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import type { ChunkRef, IOProvider, Part } from "@flowscripter/pluggable-io-framework-api";
+import {
+  ChunkKind,
+  type ChunkRef,
+  type IOProvider,
+  type JsChunk,
+  type Part,
+} from "@flowscripter/pluggable-io-framework-api";
 import { copy, move } from "../src/copyMove.ts";
 
-function makeStreamingProvider(files: Map<string, Uint8Array>, id: string): IOProvider {
+function makeStreamingProvider(
+  files: Map<string, Uint8Array>,
+  id: string,
+  kind: ChunkKind = ChunkKind.Js,
+): IOProvider {
   return {
-    async dispose() {},
+    kind,
+    async [Symbol.asyncDispose]() {},
     async *list() {},
     async getProperties(path: string) {
       const data = files.get(path);
@@ -17,9 +28,10 @@ function makeStreamingProvider(files: Map<string, Uint8Array>, id: string): IOPr
     async getReadableStream(path: string) {
       const data = files.get(path) ?? new Uint8Array();
       return {
-        stream: new ReadableStream<ChunkRef>({
+        kind,
+        stream: new ReadableStream<JsChunk>({
           start(controller) {
-            controller.enqueue({ kind: "js", data });
+            controller.enqueue({ kind: ChunkKind.Js, data });
             controller.close();
           },
         }),
@@ -28,9 +40,10 @@ function makeStreamingProvider(files: Map<string, Uint8Array>, id: string): IOPr
     async getWritableStream(path: string) {
       const chunks: Uint8Array[] = [];
       return {
-        stream: new WritableStream<ChunkRef>({
+        kind,
+        stream: new WritableStream<JsChunk>({
           write(chunk) {
-            if (chunk.kind === "js") chunks.push(chunk.data);
+            chunks.push(chunk.data);
           },
           close() {
             files.set(path, Buffer.concat(chunks));
@@ -54,7 +67,8 @@ function makeStreamingProvider(files: Map<string, Uint8Array>, id: string): IOPr
 
 function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider {
   return {
-    async dispose() {},
+    kind: ChunkKind.Js,
+    async [Symbol.asyncDispose]() {},
     async *list() {},
     async getProperties(path: string) {
       const data = files.get(path);
@@ -67,17 +81,19 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider {
     async getReadableStream(path: string) {
       const data = files.get(path) ?? new Uint8Array();
       return {
-        stream: new ReadableStream<ChunkRef>({
-          start: (c) => (c.enqueue({ kind: "js", data }), c.close()),
+        kind: ChunkKind.Js,
+        stream: new ReadableStream<JsChunk>({
+          start: (c) => (c.enqueue({ kind: ChunkKind.Js, data }), c.close()),
         }),
       };
     },
     async getWritableStream(path: string) {
       const chunks: Uint8Array[] = [];
       return {
-        stream: new WritableStream<ChunkRef>({
+        kind: ChunkKind.Js,
+        stream: new WritableStream<JsChunk>({
           write: (chunk) => {
-            if (chunk.kind === "js") chunks.push(chunk.data);
+            chunks.push(chunk.data);
           },
           close: () => {
             files.set(path, Buffer.concat(chunks));
@@ -94,8 +110,9 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider {
         const part: Part = {
           index,
           offset: index === 0 ? 0 : half,
-          stream: new ReadableStream<ChunkRef>({
-            start: (c) => (c.enqueue({ kind: "js", data: partData }), c.close()),
+          kind: ChunkKind.Js,
+          stream: new ReadableStream<JsChunk>({
+            start: (c) => (c.enqueue({ kind: ChunkKind.Js, data: partData }), c.close()),
           }),
           complete: async () => {},
         };
@@ -112,7 +129,7 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider {
             for (;;) {
               const { done, value } = await reader.read();
               if (done) break;
-              if (value.kind === "js") chunks.push(value.data);
+              if (value.kind === ChunkKind.Js) chunks.push(value.data);
             }
             collected.push({ offset: part.offset, data: Buffer.concat(chunks) });
             await part.complete();
@@ -183,6 +200,39 @@ describe("copy", () => {
     expect(new TextDecoder().decode(sinkFiles.get("b.txt"))).toBe(
       "hello world, this is a test payload",
     );
+  });
+
+  test("throws when source/sink kinds differ and no converter is supplied", async () => {
+    const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
+    const source = makeStreamingProvider(sourceFiles, "source");
+    const sink = makeStreamingProvider(new Map(), "sink", ChunkKind.Native);
+
+    let threw = false;
+    try {
+      await copy(source, "a.txt", sink, "b.txt");
+    } catch {
+      threw = true;
+    }
+    expect(threw).toBe(true);
+  });
+
+  test("uses the supplied chunkConverter exactly once per differing-kind link", async () => {
+    const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
+    const source = makeStreamingProvider(sourceFiles, "source");
+    const sinkFiles = new Map<string, Uint8Array>();
+    const sink = makeStreamingProvider(sinkFiles, "sink", ChunkKind.Native);
+
+    let converterCalls = 0;
+    await copy(source, "a.txt", sink, "b.txt", {
+      chunkConverter: (chunk, toKind) => {
+        converterCalls += 1;
+        expect(toKind).toBe(ChunkKind.Native);
+        return chunk;
+      },
+    });
+
+    expect(converterCalls).toBe(1);
+    expect(new TextDecoder().decode(sinkFiles.get("b.txt"))).toBe("hello");
   });
 });
 

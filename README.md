@@ -5,9 +5,7 @@
 [![docs](https://img.shields.io/badge/docs-API-blue)](https://flowscripter.github.io/pluggable-io-framework/index.html)
 [![license: MIT](https://img.shields.io/github/license/flowscripter/pluggable-io-framework)](https://github.com/flowscripter/pluggable-io-framework/blob/main/LICENSE)
 
-> A pluggable source/sink IO framework - provider discovery, copy/move
-> orchestration and telemetry, for files and folders across different
-> backends (local filesystem, object storage, HTTP, etc.)
+> A pluggable source/sink IO framework using https://github.com/flowscripter/dynamic-plugin-framework
 
 ## Key Features
 
@@ -26,13 +24,6 @@
     size crosses a configurable threshold) or plain streaming.
   - Reports progress via a global `TelemetryHooks` callback, tagged with a
     per-operation correlation id.
-- Standalone today - usable directly or via the
-  [flowscripter-io-cli](https://github.com/flowscripter/flowscripter-io-cli)
-  built on
-  [dynamic-cli-framework](https://github.com/flowscripter/dynamic-cli-framework).
-  When the full Flowscripter graph runtime exists, an `adapt` operator will
-  wrap these providers to bridge them into the processing graph - that
-  wrapping is out of scope for this repo.
 - See
   [pluggable-io-framework-plugin-filesystem](https://github.com/flowscripter/pluggable-io-framework-plugin-filesystem)
   for a reference local filesystem source/sink plugin.
@@ -63,6 +54,13 @@ await copy(provider, "a.txt", provider, "b.txt", {
   telemetry: { onProgress: (event) => console.log(event) },
 });
 ```
+
+## Usage Example
+
+The following example project is available:
+
+- [flowscripter-io-cli](https://github.com/flowscripter/flowscripter-io-cli) is
+  an example CLI application based on this framework.
 
 ## Development
 
