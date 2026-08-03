@@ -65,7 +65,7 @@ function makeStreamingProvider(
   };
 }
 
-function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<ChunkKind.Js> {
+function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider {
   return {
     kind: ChunkKind.Js,
     async [Symbol.asyncDispose]() {},
@@ -107,7 +107,7 @@ function makeMultipartProvider(files: Map<string, Uint8Array>): IOProvider<Chunk
       const partsData = [data.subarray(0, half), data.subarray(half)];
       for (let index = 0; index < partsData.length; index += 1) {
         const partData = partsData[index] as Uint8Array;
-        const part: Part<ChunkKind.Js> = {
+        const part: Part = {
           index,
           offset: index === 0 ? 0 : half,
           kind: ChunkKind.Js,
