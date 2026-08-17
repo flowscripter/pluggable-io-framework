@@ -24,6 +24,13 @@
     size crosses a configurable threshold) or plain streaming.
   - Reports progress via a global `TelemetryHooks` callback, tagged with a
     per-operation correlation id.
+- Stream decorators:
+  - `seekable` wraps a handle that supports `RangeReadable` with a single
+    logical stream whose read position can be jumped via `seek(offset)`,
+    instead of requiring a fresh stream per range.
+  - `locallyCached` wraps a `StreamHandle` factory so the underlying source
+    is read at most once - later calls replay cached chunks in memory
+    without touching the source again.
 - See
   [io-plugin-filesystem](https://github.com/flowscripter/io-plugin-filesystem)
   for a reference local filesystem source/sink plugin.
