@@ -40,13 +40,13 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@flowscripter/dynamic-plugin-framework": "^2.2.5",
-    "@flowscripter/pluggable-io-framework-api": "^1.0.8"
+    "@flowscripter/dynamic-plugin-framework": "^2.2.6",
+    "@flowscripter/pluggable-io-framework-api": "^1.0.9"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.1",
-    "oxfmt": "0.66.0",
-    "oxlint": "1.81.0"
+    "@types/bun": "^1.4.2",
+    "oxfmt": "0.67.0",
+    "oxlint": "1.82.0"
   },
   "peerDependencies": {
     "typescript": "^7.0.2"
