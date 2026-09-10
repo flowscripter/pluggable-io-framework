@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   ChunkKind,
+  TransientIOError,
   type ChunkRef,
   type IOProvider,
   type JsChunk,
@@ -265,5 +266,104 @@ describe("move", () => {
 
     expect(directMoveCalled).toBe(true);
     expect(sourceFiles.has("a.txt")).toBe(true); // directMove is a stub in this test - it doesn't actually delete
+  });
+});
+
+describe("retry", () => {
+  function makeFlakyProvider(
+    files: Map<string, Uint8Array>,
+    id: string,
+    failTimes: number,
+  ): IOProvider {
+    let attempts = 0;
+    const base = makeStreamingProvider(files, id);
+    return {
+      ...base,
+      async getReadableStream(path: string) {
+        attempts += 1;
+        if (attempts <= failTimes) {
+          throw new TransientIOError(`flaky attempt ${attempts}`);
+        }
+        return base.getReadableStream(path);
+      },
+    };
+  }
+
+  test("retries a TransientIOError on the non-direct path and eventually succeeds", async () => {
+    const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
+    const sinkFiles = new Map<string, Uint8Array>();
+    const source = makeFlakyProvider(sourceFiles, "source", 2);
+    const sink = makeStreamingProvider(sinkFiles, "sink");
+
+    await copy(source, "a.txt", sink, "b.txt", {
+      retry: { maxRetries: 3, backoffMs: () => 0 },
+    });
+
+    expect(new TextDecoder().decode(sinkFiles.get("b.txt"))).toBe("hello");
+  });
+
+  test("gives up once maxRetries is exceeded", async () => {
+    const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
+    const source = makeFlakyProvider(sourceFiles, "source", 5);
+    const sink = makeStreamingProvider(new Map(), "sink");
+
+    let thrown: unknown;
+    try {
+      await copy(source, "a.txt", sink, "b.txt", {
+        retry: { maxRetries: 2, backoffMs: () => 0 },
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(TransientIOError);
+  });
+
+  test("does not retry a plain (unclassified) error", async () => {
+    const sourceFiles = new Map([["a.txt", new TextEncoder().encode("hello")]]);
+    let attempts = 0;
+    const source: IOProvider = {
+      ...makeStreamingProvider(sourceFiles, "source"),
+      async getReadableStream(): Promise<never> {
+        attempts += 1;
+        throw new Error("plain failure");
+      },
+    };
+    const sink = makeStreamingProvider(new Map(), "sink");
+
+    let thrown: unknown;
+    try {
+      await copy(source, "a.txt", sink, "b.txt", { retry: { maxRetries: 3, backoffMs: () => 0 } });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect((thrown as Error).message).toBe("plain failure");
+    expect(attempts).toBe(1);
+  });
+});
+
+describe("progress hierarchy", () => {
+  test("multipart parts report their own operationId tagged with the transfer's operationId as parentOperationId", async () => {
+    const sourceFiles = new Map([
+      ["a.txt", new TextEncoder().encode("hello world, this is a test payload")],
+    ]);
+    const sinkFiles = new Map<string, Uint8Array>();
+    const source = makeMultipartProvider(sourceFiles);
+    const sink = makeMultipartProvider(sinkFiles);
+
+    const events: { operationId: string; parentOperationId?: string; bytesProcessed: number }[] =
+      [];
+    await copy(source, "a.txt", sink, "b.txt", {
+      multipartThreshold: 1,
+      telemetry: { onProgress: (event) => events.push(event) },
+    });
+
+    const topLevelId = events.find((e) => e.parentOperationId === undefined)?.operationId;
+    expect(topLevelId).toBeDefined();
+
+    const childEvents = events.filter((e) => e.operationId !== topLevelId);
+    expect(childEvents.length).toBeGreaterThan(0);
+    expect(childEvents.every((e) => e.parentOperationId === topLevelId)).toBe(true);
   });
 });
