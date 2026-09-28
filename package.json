@@ -40,8 +40,8 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@flowscripter/dynamic-plugin-framework": "^2.2.11",
-    "@flowscripter/pluggable-io-framework-api": "^1.1.4"
+    "@flowscripter/dynamic-plugin-framework": "^2.2.12",
+    "@flowscripter/pluggable-io-framework-api": "^1.1.5"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
