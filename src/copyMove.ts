@@ -324,16 +324,20 @@ async function recursiveTransfer(
   options: TransferOptions,
   mode: "copy" | "move",
 ): Promise<void> {
+  const resolvedDestRoot = await resolveRecursiveDestRoot(sourcePath, sink, destPath);
+
   if (source.canDirectTransfer?.(sink) && source.supportsRecursiveDirectTransfer) {
-    const directFn = mode === "copy" ? source.directCopy : source.directMove;
-    if (directFn) {
-      const operationId = crypto.randomUUID();
-      await directFn(sourcePath, destPath, { operationId, hooks: options.telemetry ?? {} });
+    const telemetry = { operationId: crypto.randomUUID(), hooks: options.telemetry ?? {} };
+    if (mode === "copy" && source.directCopy) {
+      await source.directCopy(sourcePath, resolvedDestRoot, telemetry);
+      return;
+    }
+    if (mode === "move" && source.directMove) {
+      await source.directMove(sourcePath, resolvedDestRoot, telemetry);
       return;
     }
   }
 
-  const resolvedDestRoot = await resolveRecursiveDestRoot(sourcePath, sink, destPath);
   const recursiveOperationId = crypto.randomUUID();
   const limiter = options.concurrencyLimiter ?? defaultConcurrencyLimiter;
 
