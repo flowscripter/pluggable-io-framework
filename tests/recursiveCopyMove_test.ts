@@ -377,3 +377,114 @@ describe("recursive move", () => {
     expect(store.files.has("src/b.txt")).toBe(true);
   });
 });
+
+class ClassFolderProvider implements IOProvider {
+  readonly #delegate: IOProvider;
+  public readonly kind = ChunkKind.Js;
+  public readonly supportsRecursiveDirectTransfer = true;
+
+  public constructor(store: Store) {
+    this.#delegate = makeFolderProvider(store, { id: "class" });
+  }
+
+  public async [Symbol.asyncDispose](): Promise<void> {}
+
+  public list(path: string, options?: { recursive?: boolean }) {
+    return this.#delegate.list(path, options);
+  }
+
+  public getProperties(path: string) {
+    return this.#delegate.getProperties(path);
+  }
+
+  public setProperties(path: string, properties: Partial<Record<string, unknown>>) {
+    return this.#delegate.setProperties(path, properties);
+  }
+
+  public delete(path: string) {
+    return this.#delegate.delete(path);
+  }
+
+  public async createFolder(path: string) {
+    await this.#delegate.createFolder?.(path);
+  }
+
+  public getReadableStream(path: string) {
+    return this.#delegate.getReadableStream(path);
+  }
+
+  public getWritableStream(path: string) {
+    return this.#delegate.getWritableStream(path);
+  }
+
+  public getMultipartReader(path: string, partSize: number) {
+    return this.#delegate.getMultipartReader(path, partSize);
+  }
+
+  public getMultipartWriter(path: string, partSize: number) {
+    return this.#delegate.getMultipartWriter(path, partSize);
+  }
+
+  public canDirectTransfer(other: IOProvider): boolean {
+    return (other as unknown) === this;
+  }
+
+  public async directCopy(sourcePath: string, destPath: string): Promise<void> {
+    await this.#delegate.directCopy?.(sourcePath, destPath);
+  }
+
+  public async directMove(sourcePath: string, destPath: string): Promise<void> {
+    await this.#delegate.directMove?.(sourcePath, destPath);
+  }
+}
+
+describe("recursive direct transfer - class-based provider", () => {
+  test("copy calls a folder-aware directCopy with the provider as `this`", async () => {
+    const store = makeStore();
+    store.files.set("src/a.txt", new TextEncoder().encode("A"));
+    const provider = new ClassFolderProvider(store);
+
+    await copy(provider, "src", provider, "dest");
+
+    expect(readFile(store, "dest/a.txt")).toBe("A");
+  });
+
+  test("move calls a folder-aware directMove with the provider as `this`", async () => {
+    const store = makeStore();
+    store.files.set("src/a.txt", new TextEncoder().encode("A"));
+    const provider = new ClassFolderProvider(store);
+
+    await move(provider, "src", provider, "dest");
+
+    expect(readFile(store, "dest/a.txt")).toBe("A");
+    expect(store.files.has("src/a.txt")).toBe(false);
+  });
+
+  test("copy into an existing folder nests the source as dest/<basename>", async () => {
+    const store = makeStore();
+    store.files.set("src/a.txt", new TextEncoder().encode("A"));
+    store.folders.add("dest");
+    const provider = new ClassFolderProvider(store);
+
+    await copy(provider, "src", provider, "dest");
+
+    expect(readFile(store, "dest/src/a.txt")).toBe("A");
+  });
+
+  test("copy onto an existing file is rejected", async () => {
+    const store = makeStore();
+    store.files.set("src/a.txt", new TextEncoder().encode("A"));
+    store.files.set("dest", new TextEncoder().encode("existing file"));
+    const provider = new ClassFolderProvider(store);
+
+    let thrown: unknown;
+    try {
+      await copy(provider, "src", provider, "dest");
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect(readFile(store, "dest")).toBe("existing file");
+  });
+});
