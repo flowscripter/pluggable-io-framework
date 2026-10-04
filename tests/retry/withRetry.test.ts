@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PermanentIOError, TransientIOError } from "@flowscripter/pluggable-io-framework-api";
-import { withRetry } from "../src/withRetry.ts";
+import { withRetry } from "../../src/retry/withRetry.ts";
 
 describe("withRetry", () => {
   test("returns the result on first success without retrying", async () => {

@@ -1,14 +1,14 @@
 import type {
-  ChunkKind,
-  ChunkOfKind,
+  PayloadKind,
+  ItemOfKind,
   RangeReadable,
   Seekable,
   StreamHandle,
 } from "@flowscripter/pluggable-io-framework-api";
 
 /**
- * Wraps a handle that already supports {@link RangeReadable} (arbitrary
- * byte-range reads) with a {@link Seekable} capability: a single logical
+ * Wraps a handle that already supports `RangeReadable` (arbitrary
+ * byte-range reads) with a `Seekable` capability: a single logical
  * stream whose read position can be jumped via `seek(offset)`, rather than
  * requiring the caller to open a fresh stream per range.
  *
@@ -16,12 +16,12 @@ import type {
  * in flight - like any seekable stream, seeking and reading are sequential,
  * not concurrent, operations on the same handle.
  */
-export function seekable<K extends ChunkKind>(
+export function seekable<K extends PayloadKind>(
   handle: StreamHandle<K> & RangeReadable<K>,
 ): StreamHandle<K> & Seekable {
-  let reader = (handle.stream as ReadableStream<ChunkOfKind<K>>).getReader();
+  let reader = (handle.stream as ReadableStream<ItemOfKind<K>>).getReader();
 
-  const stream = new ReadableStream<ChunkOfKind<K>>(
+  const stream = new ReadableStream<ItemOfKind<K>>(
     {
       async pull(controller) {
         const { done, value } = await reader.read();
