@@ -41,12 +41,13 @@
   },
   "dependencies": {
     "@flowscripter/dynamic-plugin-framework": "^2.2.14",
-    "@flowscripter/pluggable-io-framework-api": "^1.1.6"
+    "@flowscripter/pluggable-io-framework-api": "^3.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "oxfmt": "0.71.0",
-    "oxlint": "1.86.0"
+    "oxlint": "1.86.0",
+    "zod": "^4.6.5"
   },
   "peerDependencies": {
     "typescript": "^7.0.2"
