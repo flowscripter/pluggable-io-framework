@@ -10,9 +10,12 @@
 
 ## Key Features
 
-- Protocol-aware locations: `file:///data/a.txt`, `s3://bucket/key`,
-  `https://host/a` and composite schemes such as `tams+https:` select the
-  installed provider plugin for that protocol. Bare paths default to `file`.
+- Protocol-aware locations, given as a string (`file:///data/a.txt`,
+  `s3://bucket/key`, `https://host/a`, composite schemes such as
+  `tams+https:`; bare paths default to `file`) or as a structured
+  `{ protocol, location }` object. Either form selects the installed provider
+  plugin for that protocol. See
+  [String and Structured Locations](README/key-concepts.md#string-and-structured-locations).
 - A `ProviderRegistry` keyed by protocol and payload kind, with more than one
   implementation of a protocol installed side by side (e.g. JS and native
   `file` providers).

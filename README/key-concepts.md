@@ -13,27 +13,45 @@ the payload types it can read and write (`bytes` by default).
 
 ## Locations and Targets
 
-A location takes one of two forms:
-
-- A string such as `file:///data/a.txt` or `s3://bucket/key`.
-  `detectProtocol` reads its scheme (two or more characters, so a Windows
-  drive letter is not mistaken for one), defaulting to `file`. For a
-  composite scheme the protocol is the part before the first `+`. The
-  factory's `parseLocationString` turns the string into a raw location
-  object.
-- A `StructuredLocation`, `{ protocol, location }`, where `location` is the
-  raw location object itself. This form can carry fields a string cannot,
-  such as `filename`, `pattern` or credentials, and suits hosts that
-  collect location fields separately, such as a CLI.
-
-The factory validates the raw location against its `locationSchema` and
-turns it into provider config plus a `LocationTarget`:
+A location is given as a string or as a `StructuredLocation` (see below).
+Either way, the factory validates the raw location object against its
+`locationSchema` and turns it into provider config plus a `LocationTarget`:
 
 | Target      | Meaning                                    |
 | ----------- | ------------------------------------------ |
 | `entry`     | a single entry (file, object, resource)    |
 | `container` | a whole container (directory, prefix)      |
 | `pattern`   | the entries in a container matching a glob |
+
+## String and Structured Locations
+
+`ProviderRegistry.createProviderForLocation` and
+`createProvidersForTransfer` accept both forms.
+
+A string, such as `file:///data/a.txt` or `s3://bucket/key`:
+
+- `detectProtocol` reads its scheme (two or more characters, so a Windows
+  drive letter is not mistaken for one), defaulting to `file`. For a
+  composite scheme the protocol is the part before the first `+`.
+- The factory's `parseLocationString` turns it into a raw location object.
+  It can only carry what the protocol's URL form carries: for `file` that is
+  a `path`, which always becomes a `container` target, and for `s3` a
+  bucket and key without region, endpoint or credentials.
+- It is the form `ProviderResolver.createProviderForLocation` takes. A
+  composite provider resolves URLs it discovers at runtime, such as segment
+  URLs from an API, so strings are needed there. Strings are also the
+  convenient form for code that already holds a URL.
+
+A `StructuredLocation`, `{ protocol, location }`:
+
+- `location` is the raw location object itself, passed straight to the
+  factory's `locationSchema` without `detectProtocol` or
+  `parseLocationString`.
+- It can carry every field the schema defines, including those a string
+  cannot: `filename` for a single `entry` target, `pattern` for a `pattern`
+  target, and connection settings and credentials.
+- It suits hosts that collect location fields separately, such as a CLI
+  building one argument per field.
 
 ## Entries, Items and Parts
 
