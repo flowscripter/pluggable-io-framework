@@ -11,6 +11,7 @@ import {
   PLUGGABLE_IO_FRAMEWORK_PROVIDER_FACTORY_EXTENSION_POINT,
   type ProviderResolver,
 } from "@flowscripter/pluggable-io-framework-api";
+import type { TransferOptions } from "../transfer/TransferOptions.ts";
 import { detectProtocol } from "./detectProtocol.ts";
 import { DEFAULT_NATIVE_DOMAINS, negotiateTransfer } from "./negotiateTransfer.ts";
 
@@ -25,12 +26,11 @@ export interface ResolvedProvider {
 export interface TransferProviders {
   readonly source: ResolvedProvider;
   readonly dest: ResolvedProvider;
-  /** The converter to pass as `TransferOptions.converter`, when negotiation chose one. */
-  readonly converter?: PayloadConverterExtension;
-  /** The negotiated path description, for `TransferOptions.path`. */
-  readonly path: string;
-  /** The destination factory's accepted payload types, for `TransferOptions.writePayloadTypes`. */
-  readonly writePayloadTypes: readonly string[];
+  /**
+   * The negotiated `converter`, `path` and `writePayloadTypes`, to pass to
+   * `copy`/`move` as is or spread together with caller options.
+   */
+  readonly options: TransferOptions;
 }
 
 function locationFieldNames(factory: IOProviderFactory): string[] {
@@ -165,9 +165,11 @@ export class ProviderRegistry implements ProviderResolver {
     return {
       source: sourceResolved,
       dest: destResolved,
-      converter: negotiation.converter,
-      path: negotiation.path,
-      writePayloadTypes: negotiation.dest.factory.writePayloadTypes ?? [BYTES_PAYLOAD_TYPE],
+      options: {
+        converter: negotiation.converter,
+        path: negotiation.path,
+        writePayloadTypes: negotiation.dest.factory.writePayloadTypes ?? [BYTES_PAYLOAD_TYPE],
+      },
     };
   }
 

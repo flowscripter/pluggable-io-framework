@@ -51,13 +51,13 @@ const registry = new ProviderRegistry(
 );
 await registry.discover();
 
-const { source, dest, converter, path, writePayloadTypes } =
-  await registry.createProvidersForTransfer("file:///data/in", "s3://bucket/out");
+const { source, dest, options } = await registry.createProvidersForTransfer(
+  "file:///data/in",
+  "s3://bucket/out",
+);
 
 const result = await copy(source.provider, source.target, dest.provider, dest.target, {
-  converter,
-  path,
-  writePayloadTypes,
+  ...options,
   telemetry: { onProgress: (event) => console.log(event) },
 });
 console.log(result.path);

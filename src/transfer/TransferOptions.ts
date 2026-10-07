@@ -11,12 +11,22 @@ export interface TransferOptions {
   readonly multipartThreshold?: number;
   /**
    * The payload converter chosen by negotiation, applied to every item.
-   * Without one, the source and sink must share a payload kind.
+   * Without one, the source and sink must share a payload kind. Set by the
+   * options `createProvidersForTransfer` returns.
    */
   readonly converter?: PayloadConverterExtension;
-  /** The negotiated path description reported in {@link TransferResult.path}. */
+  /**
+   * The negotiated path description reported in {@link TransferResult.path}.
+   * Set by the options `createProvidersForTransfer` returns; without it the
+   * path is described from the provider kinds.
+   */
   readonly path?: string;
-  /** Payload type IDs the sink's factory accepts. Defaults to `["bytes"]`. */
+  /**
+   * Payload type IDs the sink's factory accepts, which an opened source
+   * handle's `payloadType` must be one of. Providers don't carry their
+   * factory's declarations, so `createProvidersForTransfer` returns them in
+   * its options. Defaults to `["bytes"]`.
+   */
   readonly writePayloadTypes?: readonly string[];
   /**
    * Bounds concurrent multipart parts and recursive/pattern entries.

@@ -17,7 +17,8 @@ For each entry, `copy`/`move` choose one strategy:
    handle.
 
 Before streaming, the source's payload type must be one of
-`TransferOptions.writePayloadTypes` (`["bytes"]` by default).
+`TransferOptions.writePayloadTypes` (`["bytes"]` by default), which
+`createProvidersForTransfer` sets from the destination factory.
 
 ```mermaid
 flowchart TD
@@ -340,9 +341,7 @@ classDiagram
     class TransferProviders {
       +source: ResolvedProvider
       +dest: ResolvedProvider
-      +converter
-      +path
-      +writePayloadTypes
+      +options: TransferOptions
     }
     ProviderRegistry ..|> ProviderResolver
     ProviderRegistry --> PluginManager : discovers through
@@ -373,5 +372,5 @@ sequenceDiagram
     SF-->>R: source provider
     R->>DF: same steps for dest
     DF-->>R: dest provider (source disposed if this fails)
-    R-->>H: { source, dest, converter, path, writePayloadTypes }
+    R-->>H: { source, dest, options: { converter, path, writePayloadTypes } }
 ```

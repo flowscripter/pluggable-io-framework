@@ -205,9 +205,9 @@ describe("ProviderRegistry.createProvidersForTransfer", () => {
     const result = await registry.createProvidersForTransfer("dev://a", "s3://b");
     expect(result.source.provider.kind).toBe(PayloadKind.Native);
     expect(result.dest.provider.kind).toBe(PayloadKind.Js);
-    expect(result.converter).toBe(converter);
-    expect(result.path).toBe("dev/native[host] -> s3/js via native->js (zero-copy)");
-    expect(result.writePayloadTypes).toEqual(["bytes", "urn:x"]);
+    expect(result.options.converter).toBe(converter);
+    expect(result.options.path).toBe("dev/native[host] -> s3/js via native->js (zero-copy)");
+    expect(result.options.writePayloadTypes).toEqual(["bytes", "urn:x"]);
   });
 
   test("defaults writePayloadTypes to bytes and honours an explicit kind", async () => {
@@ -218,8 +218,8 @@ describe("ProviderRegistry.createProvidersForTransfer", () => {
     const result = await registry.createProvidersForTransfer("file://a", "file://b", {
       kind: PayloadKind.Native,
     });
-    expect(result.path).toBe("file/native[host] -> file/native[host]");
-    expect(result.writePayloadTypes).toEqual(["bytes"]);
+    expect(result.options.path).toBe("file/native[host] -> file/native[host]");
+    expect(result.options.writePayloadTypes).toEqual(["bytes"]);
     await expect(registry.createProvidersForTransfer("file://a", "nope://b")).rejects.toThrow(
       'No provider for protocol "nope"',
     );
