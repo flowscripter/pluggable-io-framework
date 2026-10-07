@@ -297,7 +297,7 @@ classDiagram
       +getProtocols() string[]
       +getKinds(protocol) PayloadKind[]
       +getFactory(protocol, kind?) IOProviderFactory
-      +getConverters() PayloadConverterExtension[]
+      +getConverters() PayloadConverter[]
       +createProviderForLocation(location, options?) ResolvedProvider
       +createProvidersForTransfer(source, dest, options?) TransferProviders
     }
@@ -323,7 +323,7 @@ classDiagram
       +toProviderInputs(location)
       +createProvider(config, context)
     }
-    class PayloadConverterExtension {
+    class PayloadConverter {
       <<interface>>
       +from
       +to
@@ -346,7 +346,7 @@ classDiagram
     ProviderRegistry ..|> ProviderResolver
     ProviderRegistry --> PluginManager : discovers through
     ProviderRegistry "1" o-- "*" IOProviderFactory : by protocol and kind
-    ProviderRegistry "1" o-- "*" PayloadConverterExtension
+    ProviderRegistry "1" o-- "*" PayloadConverter
     ProviderRegistry ..> detectProtocol : uses
     ProviderRegistry ..> negotiateTransfer : uses
     ProviderRegistry ..> TransferProviders : returns

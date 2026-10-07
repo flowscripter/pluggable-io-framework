@@ -1,7 +1,7 @@
 import {
   BYTES_PAYLOAD_TYPE,
   type IOProviderFactory,
-  type PayloadConverterExtension,
+  type PayloadConverter,
   PayloadKind,
 } from "@flowscripter/pluggable-io-framework-api";
 import { describeConverter, describeKind } from "../util/describePath.ts";
@@ -16,7 +16,7 @@ export interface Endpoint {
 export interface Negotiation {
   readonly source: Endpoint;
   readonly dest: Endpoint;
-  readonly converter?: PayloadConverterExtension;
+  readonly converter?: PayloadConverter;
   readonly path: string;
 }
 
@@ -40,7 +40,7 @@ function sharesPayloadType(source: Endpoint, dest: Endpoint): boolean {
   return reads.some((payloadType) => writes.includes(payloadType));
 }
 
-function matches(end: PayloadConverterExtension["from"], endpoint: Endpoint): boolean {
+function matches(end: PayloadConverter["from"], endpoint: Endpoint): boolean {
   return end.kind === endpoint.kind && (end.domain === undefined || end.domain === endpoint.domain);
 }
 
@@ -69,7 +69,7 @@ export function negotiateTransfer(
   sourceFactories: readonly IOProviderFactory[],
   destProtocol: string,
   destFactories: readonly IOProviderFactory[],
-  converters: readonly PayloadConverterExtension[],
+  converters: readonly PayloadConverter[],
   kind?: PayloadKind,
 ): Negotiation {
   const restrict = (factories: readonly IOProviderFactory[]) =>
@@ -79,7 +79,7 @@ export function negotiateTransfer(
       .sort((a, b) => kindOrder(a.kind) - kindOrder(b.kind));
   const sources = restrict(sourceFactories);
   const dests = restrict(destFactories);
-  const describe = (source: Endpoint, dest: Endpoint, converter?: PayloadConverterExtension) =>
+  const describe = (source: Endpoint, dest: Endpoint, converter?: PayloadConverter) =>
     `${sourceProtocol}/${describeKind(source.kind, source.domain)} -> ${destProtocol}/${describeKind(dest.kind, dest.domain)}${converter ? describeConverter(converter) : ""}`;
 
   const pairs = sources.flatMap((source) =>

@@ -1,7 +1,4 @@
-import type {
-  PayloadConverterExtension,
-  PayloadKind,
-} from "@flowscripter/pluggable-io-framework-api";
+import type { PayloadConverter, PayloadKind } from "@flowscripter/pluggable-io-framework-api";
 
 /** `kind` or `kind[domain]`. */
 export function describeKind(kind: PayloadKind, domain?: string): string {
@@ -9,7 +6,7 @@ export function describeKind(kind: PayloadKind, domain?: string): string {
 }
 
 /** ` via from->to (zero-copy)` or ` via from->to (copy)`. */
-export function describeConverter(converter: PayloadConverterExtension): string {
+export function describeConverter(converter: PayloadConverter): string {
   const cost = converter.cost === 0 ? "zero-copy" : "copy";
   return ` via ${describeKind(converter.from.kind, converter.from.domain)}->${describeKind(converter.to.kind, converter.to.domain)} (${cost})`;
 }

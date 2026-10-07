@@ -6,7 +6,7 @@ import {
   PayloadKind,
   PLUGGABLE_IO_FRAMEWORK_PAYLOAD_CONVERTER_EXTENSION_POINT,
   PLUGGABLE_IO_FRAMEWORK_PROVIDER_FACTORY_EXTENSION_POINT,
-  type PayloadConverterExtension,
+  type PayloadConverter,
   type ProviderContext,
 } from "@flowscripter/pluggable-io-framework-api";
 import { z } from "zod";
@@ -56,7 +56,7 @@ export function makeFakeFactory(options: FakeFactoryOptions): IOProviderFactory 
 /** A minimal plugin manager serving the given factories and converters. */
 export function makeFakePluginManager(
   factories: readonly IOProviderFactory[],
-  converters: readonly PayloadConverterExtension[] = [],
+  converters: readonly PayloadConverter[] = [],
 ): PluginManager {
   const extensions = new Map<string, unknown>();
   const byPoint = new Map<string, ExtensionInfo[]>([
@@ -85,9 +85,9 @@ export function makeFakePluginManager(
 }
 
 export function makeConverter(
-  from: PayloadConverterExtension["from"],
-  to: PayloadConverterExtension["to"],
+  from: PayloadConverter["from"],
+  to: PayloadConverter["to"],
   cost: 0 | 1,
-): PayloadConverterExtension {
+): PayloadConverter {
   return { from, to, cost, convert: (item) => item };
 }

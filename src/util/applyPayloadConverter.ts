@@ -1,7 +1,7 @@
 import {
   adaptReadableStream,
   type Item,
-  type PayloadConverterExtension,
+  type PayloadConverter,
   type PayloadKind,
 } from "@flowscripter/pluggable-io-framework-api";
 
@@ -15,7 +15,7 @@ export function applyPayloadConverter(
   stream: ReadableStream<Item>,
   fromKind: PayloadKind,
   toKind: PayloadKind,
-  converter: PayloadConverterExtension | undefined,
+  converter: PayloadConverter | undefined,
 ): ReadableStream<Item> {
   if (!converter) {
     return adaptReadableStream(stream, fromKind, toKind);

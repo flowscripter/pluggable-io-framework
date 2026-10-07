@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   type Item,
-  type PayloadConverterExtension,
+  type PayloadConverter,
   PayloadKind,
 } from "@flowscripter/pluggable-io-framework-api";
 import { applyPayloadConverter } from "../../src/util/applyPayloadConverter.ts";
@@ -34,7 +34,7 @@ describe("applyPayloadConverter", () => {
 
   test("applies a converter to every item even when kinds match", async () => {
     let calls = 0;
-    const converter: PayloadConverterExtension = {
+    const converter: PayloadConverter = {
       from: { kind: PayloadKind.Js },
       to: { kind: PayloadKind.Js },
       cost: 1,

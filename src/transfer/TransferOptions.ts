@@ -1,7 +1,4 @@
-import type {
-  PayloadConverterExtension,
-  TelemetryHooks,
-} from "@flowscripter/pluggable-io-framework-api";
+import type { PayloadConverter, TelemetryHooks } from "@flowscripter/pluggable-io-framework-api";
 import type { ConcurrencyLimiter } from "../concurrency/ConcurrencyLimiter.ts";
 import type { RetryOptions } from "../retry/RetryOptions.ts";
 
@@ -14,7 +11,7 @@ export interface TransferOptions {
    * Without one, the source and sink must share a payload kind. Set by the
    * options `createProvidersForTransfer` returns.
    */
-  readonly converter?: PayloadConverterExtension;
+  readonly converter?: PayloadConverter;
   /**
    * The negotiated path description reported in {@link TransferResult.path}.
    * Set by the options `createProvidersForTransfer` returns; without it the

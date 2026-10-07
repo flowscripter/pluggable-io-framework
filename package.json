@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@flowscripter/dynamic-plugin-framework": "^2.2.14",
-    "@flowscripter/pluggable-io-framework-api": "^2.0.0"
+    "@flowscripter/pluggable-io-framework-api": "^3.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

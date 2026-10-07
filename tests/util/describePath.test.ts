@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PayloadKind } from "@flowscripter/pluggable-io-framework-api";
+import { type Item, PayloadKind } from "@flowscripter/pluggable-io-framework-api";
 import { describeConverter, describeKind } from "../../src/util/describePath.ts";
 
 describe("describePath", () => {
@@ -9,7 +9,7 @@ describe("describePath", () => {
   });
 
   test("describeConverter names both ends and the cost", () => {
-    const convert = (item: never) => item;
+    const convert = (item: Item) => item;
     expect(
       describeConverter({
         from: { kind: PayloadKind.Native },

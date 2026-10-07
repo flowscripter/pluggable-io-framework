@@ -3,7 +3,7 @@ import {
   type BufferLease,
   type IOProvider,
   type Item,
-  type PayloadConverterExtension,
+  type PayloadConverter,
   PayloadKind,
   PermanentIOError,
   TransientIOError,
@@ -106,7 +106,7 @@ describe("transferEntry", () => {
     await expect(run(source, nativeSink)).rejects.toThrow();
 
     let calls = 0;
-    const converter: PayloadConverterExtension = {
+    const converter: PayloadConverter = {
       from: { kind: PayloadKind.Js },
       to: { kind: PayloadKind.Native, domain: "host" },
       cost: 1,

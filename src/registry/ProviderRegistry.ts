@@ -5,7 +5,7 @@ import {
   type IOProviderFactory,
   type LocationTarget,
   PayloadKind,
-  type PayloadConverterExtension,
+  type PayloadConverter,
   PermanentIOError,
   PLUGGABLE_IO_FRAMEWORK_PAYLOAD_CONVERTER_EXTENSION_POINT,
   PLUGGABLE_IO_FRAMEWORK_PROVIDER_FACTORY_EXTENSION_POINT,
@@ -46,7 +46,7 @@ function locationFieldNames(factory: IOProviderFactory): string[] {
  */
 export class ProviderRegistry implements ProviderResolver {
   #factories = new Map<string, Map<PayloadKind, IOProviderFactory>>();
-  #converters: PayloadConverterExtension[] = [];
+  #converters: PayloadConverter[] = [];
 
   public constructor(private readonly pluginManager: PluginManager) {}
 
@@ -82,14 +82,12 @@ export class ProviderRegistry implements ProviderResolver {
       byKind.set(factory.kind, factory);
       factories.set(factory.protocol, byKind);
     }
-    const converters: PayloadConverterExtension[] = [];
+    const converters: PayloadConverter[] = [];
     for (const extension of await this.#extensions(
       PLUGGABLE_IO_FRAMEWORK_PAYLOAD_CONVERTER_EXTENSION_POINT,
     )) {
       converters.push(
-        (await this.pluginManager.instantiate(
-          extension.extensionHandle,
-        )) as PayloadConverterExtension,
+        (await this.pluginManager.instantiate(extension.extensionHandle)) as PayloadConverter,
       );
     }
     this.#factories = factories;
@@ -112,7 +110,7 @@ export class ProviderRegistry implements ProviderResolver {
     return byKind.get(PayloadKind.Js) ?? byKind.values().next().value;
   }
 
-  public getConverters(): readonly PayloadConverterExtension[] {
+  public getConverters(): readonly PayloadConverter[] {
     return this.#converters;
   }
 
