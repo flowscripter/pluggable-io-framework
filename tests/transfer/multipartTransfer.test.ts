@@ -20,6 +20,7 @@ async function run(
   sourceOptions: MemoryProviderOptions,
   options: TransferOptions = {},
   hooks: TelemetryHooks = {},
+  startOffset?: number,
 ) {
   const source = makeMemoryProvider(makeStore({ a: content }), sourceOptions);
   const sinkStore = makeStore();
@@ -32,6 +33,7 @@ async function run(
     writer: sink.getMultipartWriter("b", 10),
     totalBytes: content.length,
     partSize: 10,
+    startOffset,
     limiter: new ConcurrencyLimiter(2),
     context: { operationId: "op", hooks, options, type: "copy" },
   });
@@ -82,6 +84,12 @@ describe("multipartTransfer", () => {
         { retry: { maxRetries: 1, backoffMs: () => 0 } },
       ),
     ).rejects.toThrow("part read failed");
+  });
+
+  test("with startOffset, sends only the parts from that offset and counts the earlier bytes", async () => {
+    const { result, sinkStore } = await run({}, {}, {}, 20);
+    expect(readText(sinkStore, "b")).toBe(content.slice(20));
+    expect(result).toEqual({ bytes: content.length, items: 2, stopped: false });
   });
 
   test("stop ends the transfer after the parts already started", async () => {

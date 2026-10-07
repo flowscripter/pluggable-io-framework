@@ -13,13 +13,21 @@ the payload types it can read and write (`bytes` by default).
 
 ## Locations and Targets
 
-A location is a string such as `file:///data/a.txt` or `s3://bucket/key`.
-`detectProtocol` reads its scheme (two or more characters, so a Windows
-drive letter is not mistaken for one), defaulting to `file`. For a
-composite scheme the protocol is the part before the first `+`.
+A location takes one of two forms:
 
-The factory parses the location against its `locationSchema` and turns it
-into provider config plus a `LocationTarget`:
+- A string such as `file:///data/a.txt` or `s3://bucket/key`.
+  `detectProtocol` reads its scheme (two or more characters, so a Windows
+  drive letter is not mistaken for one), defaulting to `file`. For a
+  composite scheme the protocol is the part before the first `+`. The
+  factory's `parseLocationString` turns the string into a raw location
+  object.
+- A `StructuredLocation`, `{ protocol, location }`, where `location` is the
+  raw location object itself. This form can carry fields a string cannot,
+  such as `filename`, `pattern` or credentials, and suits hosts that
+  collect location fields separately, such as a CLI.
+
+The factory validates the raw location against its `locationSchema` and
+turns it into provider config plus a `LocationTarget`:
 
 | Target      | Meaning                                    |
 | ----------- | ------------------------------------------ |

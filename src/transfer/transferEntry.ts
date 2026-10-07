@@ -5,7 +5,9 @@ import {
   isBufferProvider,
   isFillReadable,
   isRangeReadable,
+  isResumableWritable,
   type Item,
+  type MultipartWriter,
   PermanentIOError,
   type StreamHandle,
 } from "@flowscripter/pluggable-io-framework-api";
@@ -124,19 +126,24 @@ export async function transferEntry(input: TransferEntryInput): Promise<Transfer
   ) {
     await cancelStream(readable);
     const rangeReadable = readable;
-    outcome = await withRetry(
-      () =>
-        multipartTransfer({
-          readable: rangeReadable,
-          sink,
-          writer: multipartWriter(destKey, partSize),
-          totalBytes: size,
-          partSize,
-          limiter: options.concurrencyLimiter ?? defaultConcurrencyLimiter,
-          context,
-        }),
-      retry,
-    );
+    let writer: MultipartWriter | undefined;
+    outcome = await withRetry(() => {
+      // A retry continues the failed writer's upload when it has a resume token.
+      const token = writer && isResumableWritable(writer) ? writer.resumeToken() : undefined;
+      writer = token
+        ? multipartWriter(destKey, partSize, { resume: token })
+        : multipartWriter(destKey, partSize);
+      return multipartTransfer({
+        readable: rangeReadable,
+        sink,
+        writer,
+        totalBytes: size,
+        partSize,
+        startOffset: token?.offset,
+        limiter: options.concurrencyLimiter ?? defaultConcurrencyLimiter,
+        context,
+      });
+    }, retry);
     strategy = "multipart";
   } else {
     let writable = await withRetry(() => sink.getWritableStream(destKey), retry);

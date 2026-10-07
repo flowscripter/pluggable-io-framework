@@ -2,9 +2,11 @@ import {
   type EntryProperties,
   type IOProvider,
   type Item,
+  type MultipartWriter,
   type Part,
   type PartSizeConstraints,
   PayloadKind,
+  type ResumableWritable,
   type ResumeToken,
   type StreamHandle,
 } from "@flowscripter/pluggable-io-framework-api";
@@ -258,12 +260,21 @@ export function makeMemoryProvider(
   };
 
   if (options.multipart) {
-    provider.getMultipartWriter = (path: string, partSize: number) => {
+    // Committed parts per upload id, kept across writers so a resumed writer sees them.
+    const uploads = new Map<string, Map<number, Uint8Array>>();
+    provider.getMultipartWriter = (
+      path: string,
+      partSize: number,
+      opts?: { resume?: ResumeToken },
+    ) => {
       options.recordedPartSizes?.push(partSize);
       const p = normalize(path);
-      return {
+      const uploadId = (opts?.resume?.state as string | undefined) ?? crypto.randomUUID();
+      const committed = uploads.get(uploadId) ?? new Map<number, Uint8Array>();
+      uploads.set(uploadId, committed);
+      store.events.push(`multipart:${p}:${opts?.resume ? "resume" : "start"}`);
+      const writer: MultipartWriter<PayloadKind.Js> & Partial<ResumableWritable> = {
         async write(parts: AsyncIterable<Part<PayloadKind.Js>>) {
-          const collected: { offset: number; data: Uint8Array }[] = [];
           for await (const part of parts) {
             const reader = (part.stream as ReadableStream<Item<PayloadKind.Js>>).getReader();
             const chunks: Uint8Array[] = [];
@@ -272,13 +283,25 @@ export function makeMemoryProvider(
               if (done) break;
               chunks.push(value.payload.data);
             }
-            collected.push({ offset: part.offset, data: Buffer.concat(chunks) });
+            store.events.push(`part:${p}:${part.index}`);
+            options.onWrite?.(p, part.offset);
+            committed.set(part.index, Buffer.concat(chunks));
             await part.complete();
           }
-          collected.sort((a, b) => a.offset - b.offset);
-          store.files.set(p, Buffer.concat(collected.map((c) => c.data)));
+          const indexes = [...committed.keys()].sort((a, b) => a - b);
+          store.files.set(p, Buffer.concat(indexes.map((index) => committed.get(index)!)));
         },
       };
+      if (options.resumable) {
+        writer.resumeToken = () => {
+          let offset = 0;
+          for (let index = 0; committed.has(index); index += 1) {
+            offset += committed.get(index)!.byteLength;
+          }
+          return { offset, state: uploadId };
+        };
+      }
+      return writer;
     };
   }
 
