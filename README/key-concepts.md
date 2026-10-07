@@ -27,6 +27,45 @@ into provider config plus a `LocationTarget`:
 | `container` | a whole container (directory, prefix)      |
 | `pattern`   | the entries in a container matching a glob |
 
+## Entries, items and parts
+
+- An **entry** is a single stored thing a provider addresses by key: a
+  file, an object, an HTTP resource. Its metadata is `EntryProperties`.
+  Entries live in **containers** (directories, prefixes).
+- An **item** is the unit a stream carries: optional attributes plus a
+  payload. Reading an entry through a stream handle yields a sequence of
+  items, and writing items to a writable stream handle produces an entry.
+  One entry is usually many items.
+- A **part** is one byte range of an entry in a multipart transfer, with
+  an `index`, an `offset` and its own stream of items. The framework splits
+  an entry into parts with `readRange`, transfers them concurrently, and
+  the sink's multipart writer reassembles them into the destination entry.
+
+```mermaid
+classDiagram
+    direction LR
+    class Entry {
+      key
+      EntryProperties
+    }
+    class Part {
+      index
+      offset
+      stream
+    }
+    class Item {
+      attributes?
+      payload
+    }
+    Entry "1" --> "*" Part : split into (multipart)
+    Entry "1" --> "*" Item : streamed as
+    Part "1" --> "*" Item : streamed as
+```
+
+A `copy` of one entry therefore moves one entry's worth of items, either
+as a single stream or as several parts; a container or pattern transfer
+does this once per entry.
+
 ## Items, payload kinds, domains and types
 
 Streams carry `Item`s: optional attributes plus a JS or native payload. A
