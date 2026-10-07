@@ -3,14 +3,14 @@
 Plugin support is provided via
 [dynamic-plugin-framework](https://github.com/flowscripter/dynamic-plugin-framework).
 
-## Extension points
+## Extension Points
 
 | Extension point constant                                   | Extension type              |
 | ---------------------------------------------------------- | --------------------------- |
 | `PLUGGABLE_IO_FRAMEWORK_PROVIDER_FACTORY_EXTENSION_POINT`  | `IOProviderFactory`         |
 | `PLUGGABLE_IO_FRAMEWORK_PAYLOAD_CONVERTER_EXTENSION_POINT` | `PayloadConverterExtension` |
 
-## Writing a plugin
+## Writing a Plugin
 
 Plugin authors should depend on
 [`@flowscripter/pluggable-io-framework-api`](https://github.com/flowscripter/pluggable-io-framework-api)

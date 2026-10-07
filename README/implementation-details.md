@@ -1,6 +1,6 @@
 # Implementation Details
 
-## Choosing a transfer strategy
+## Choosing a Transfer Strategy
 
 For each entry, `copy`/`move` choose one strategy:
 
@@ -39,12 +39,17 @@ flowchart TD
     L -- no --> S["stream: read item -> convert -> write item,<br/>with resume / reconnect on TransientIOError"]
 ```
 
-| Strategy  | Used when                                                                 | What it does                                                                        | Path suffix       |
+| Strategy  | Conditions                                                                | Behaviour                                                                           | Path suffix       |
 | --------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------- |
 | direct    | `canDirectTransfer(sink)` and `directTransfer` is not `false`             | calls the provider's `directCopy`/`directMove`; no streams in the framework         | `direct`          |
 | multipart | bounded `RangeReadable` source, sink multipart writer, size >= threshold  | reads parts with `readRange`, retries a part on its own, writes via the sink writer | `multipart`       |
 | lease     | no converter, `FillReadable` source and `BufferProvider` sink in a domain | the source fills sink-provided buffers which are committed in order                 | `lease (depth N)` |
 | stream    | otherwise                                                                 | pipes items, applying the converter, with resume and live-source reconnection       | `stream`          |
+
+The path suffix is appended to the negotiated path description in
+`TransferResult.path`, so the result records which strategy moved the data.
+For example, a stream transfer between two `file` providers reports
+`file/js -> file/js, stream`.
 
 ```mermaid
 sequenceDiagram
@@ -74,7 +79,7 @@ sequenceDiagram
     E->>K: close() (abort() on signal)
 ```
 
-## Part-size negotiation
+## Part-Size Negotiation
 
 Both providers report `getPartSizeConstraints(totalSize)` (a missing
 implementation is unconstrained). The part size is the largest of both
@@ -83,7 +88,7 @@ minimums and defaults, raised so the part count stays within both
 the transfer streams instead. Parts are read with `readRange(start, end)`,
 where `end` is exclusive.
 
-## Lease transfers
+## Lease Transfers
 
 The engine acquires a buffer from the sink, has the source fill it, then
 commits it. Up to `leaseDepth` leases (default 2, capped by the sink's
@@ -92,7 +97,7 @@ committing the previous one. Reads are serialised and commits happen in
 order. Every lease not yet committed is released on abort, error or end of
 stream.
 
-## Retries and resume
+## Retries and Resume
 
 Only `TransientIOError`s are retried, up to `retry.maxRetries` with
 `retry.backoffMs` between attempts:
@@ -110,15 +115,21 @@ Only `TransientIOError`s are retried, up to `retry.maxRetries` with
   transfer fails.
 
 For stream transfers `maxRetries` counts consecutive failures and resets
-once an item is written. Direct transfers are never retried by the
-framework.
+once an item is written. Direct transfers are not retried by the framework:
+a provider's `directCopy`/`directMove` can retry internally, since it knows
+which of its backend's failures are safe to repeat (the AWS SDK already
+does this for S3 server-side copies).
 
-## Recursive and pattern transfers
+## Recursive and Pattern Transfers
 
-A container transfer resolves its destination with `cp -r` rules: a
-destination that doesn't exist becomes the copy; an existing container gets
-the source nested inside it as `<dest>/<source basename>`; an existing entry
-is rejected. If the source declares `supportsRecursiveDirectTransfer` and a
+A container transfer resolves its destination with `cp -r` rules:
+
+- a destination that doesn't exist becomes the copy;
+- an existing container gets the source nested inside it as
+  `<dest>/<source basename>`;
+- an existing entry is rejected.
+
+If the source declares `supportsRecursiveDirectTransfer` and a
 direct transfer is allowed, the whole container is handed to one
 `directCopy`/`directMove`. Otherwise the container is listed recursively,
 sub-containers are recreated with `createContainer`, and each entry is
@@ -215,6 +226,14 @@ report under their own ids, tagged with the parent's id as
 
 ## Decorators
 
+`seekable` turns a handle that can serve byte ranges into one logical
+stream whose position can be moved: `seek(offset)` replaces the current
+reader with `readRange(offset, ...)`.
+
+`locallyCached` wraps the function that opens a handle rather than the
+handle itself, because a handle's stream can only be read once: the first
+open drains and caches the items, later opens replay them.
+
 ```mermaid
 classDiagram
     class StreamHandle~K~ {
@@ -262,14 +281,13 @@ classDiagram
     locallyCached ..> IOProvider : wraps getReadableStream opener
 ```
 
-`seekable` turns a handle that can serve byte ranges into one logical
-stream whose position can be moved: `seek(offset)` replaces the current
-reader with `readRange(offset, ...)`. `locallyCached` wraps the function
-that opens a handle rather than the handle itself, because a handle's
-stream can only be read once: the first open drains and caches the items,
-later opens replay them.
+## Provider Registry and Provider Resolution
 
-## Provider registry
+The registry passes a `ProviderResolver` to every provider it creates, so a
+composite provider can obtain other installed providers. Inner providers
+default to the outer provider's kind and domain, and resolution fails with
+`PermanentIOError("provider resolution too deep")` beyond four nested
+levels. The outer provider disposes the providers it resolved.
 
 ```mermaid
 classDiagram
@@ -357,11 +375,3 @@ sequenceDiagram
     DF-->>R: dest provider (source disposed if this fails)
     R-->>H: { source, dest, converter, path, writePayloadTypes }
 ```
-
-## Provider resolution
-
-The registry passes a `ProviderResolver` to every provider it creates, so a
-composite provider can obtain other installed providers. Inner providers
-default to the outer provider's kind and domain, and resolution fails with
-`PermanentIOError("provider resolution too deep")` beyond four nested
-levels. The outer provider disposes the providers it resolved.

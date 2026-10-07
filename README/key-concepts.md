@@ -3,7 +3,7 @@
 The contracts referred to here are defined in
 [pluggable-io-framework-api](https://github.com/flowscripter/pluggable-io-framework-api).
 
-## Providers and factories
+## Providers and Factories
 
 An `IOProviderFactory` serves one protocol (`file`, `s3`, `https`, ...) and
 creates `IOProvider`s of one payload kind (`js` or `native`). At most one
@@ -11,7 +11,7 @@ factory may be installed for each (protocol, kind) pair. Native factories
 also declare the memory domains they support, and every factory declares
 the payload types it can read and write (`bytes` by default).
 
-## Locations and targets
+## Locations and Targets
 
 A location is a string such as `file:///data/a.txt` or `s3://bucket/key`.
 `detectProtocol` reads its scheme (two or more characters, so a Windows
@@ -27,7 +27,7 @@ into provider config plus a `LocationTarget`:
 | `container` | a whole container (directory, prefix)      |
 | `pattern`   | the entries in a container matching a glob |
 
-## Entries, items and parts
+## Entries, Items and Parts
 
 - An **entry** is a single stored thing a provider addresses by key: a
   file, an object, an HTTP resource. Its metadata is `EntryProperties`.
@@ -66,7 +66,7 @@ A `copy` of one entry therefore moves one entry's worth of items, either
 as a single stream or as several parts; a container or pattern transfer
 does this once per entry.
 
-## Items, payload kinds, domains and types
+## Items, Payload Kinds, Domains and Types
 
 Streams carry `Item`s: optional attributes plus a JS or native payload. A
 stream has one payload kind. Native payloads also carry a memory domain
@@ -101,7 +101,7 @@ description of the negotiated path, which `copy`/`move` report back.
 
 Both resolve with a `TransferResult` (`stopped`, `bytes`, `items`, `path`).
 
-## Stop and cancel
+## Stop and Cancel
 
 - `signal` cancels: the source is cancelled, the sink aborted, and the
   transfer rejects with an `AbortError`.
@@ -109,7 +109,7 @@ Both resolve with a `TransferResult` (`stopped`, `bytes`, `items`, `path`).
   and the result reports `stopped: true`. A stopped `move` never deletes its
   source.
 
-## Live sources
+## Live Sources
 
 A readable handle with `bounded: false` is a live source that runs until
 end of stream or `stop`. `move` rejects live sources.
