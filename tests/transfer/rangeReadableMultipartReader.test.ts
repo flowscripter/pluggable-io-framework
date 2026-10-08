@@ -39,6 +39,17 @@ describe("rangeReadableMultipartReader", () => {
     ]);
   });
 
+  test("starts at the part containing startOffset", async () => {
+    const provider = makeMemoryProvider(makeStore({ a: "0123456789" }));
+    const handle = await provider.getReadableStream("a");
+    if (!isRangeReadable(handle)) throw new Error("expected RangeReadable");
+    const offsets: number[] = [];
+    for await (const part of rangeReadableMultipartReader(handle, 10, 4, 5)) {
+      offsets.push(part.offset);
+    }
+    expect(offsets).toEqual([4, 8]);
+  });
+
   test("yields a single empty part for an empty entry", async () => {
     const provider = makeMemoryProvider(makeStore({ a: "" }));
     const handle = await provider.getReadableStream("a");

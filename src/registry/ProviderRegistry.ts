@@ -13,6 +13,7 @@ import {
 } from "@flowscripter/pluggable-io-framework-api";
 import type { TransferOptions } from "../transfer/TransferOptions.ts";
 import { detectProtocol } from "./detectProtocol.ts";
+import type { StructuredLocation } from "./StructuredLocation.ts";
 import { DEFAULT_NATIVE_DOMAINS, negotiateTransfer } from "./negotiateTransfer.ts";
 
 /** Nested provider resolutions allowed before resolution fails. */
@@ -33,6 +34,10 @@ export interface TransferProviders {
   readonly options: TransferOptions;
 }
 
+function protocolOf(location: string | StructuredLocation): string {
+  return typeof location === "string" ? detectProtocol(location) : location.protocol;
+}
+
 function locationFieldNames(factory: IOProviderFactory): string[] {
   const shape = (factory.locationSchema as { shape?: Record<string, unknown> }).shape;
   return Object.keys(shape ?? {}).sort();
@@ -41,7 +46,8 @@ function locationFieldNames(factory: IOProviderFactory): string[] {
 /**
  * Discovers provider factories and payload converters through a
  * `dynamic-plugin-framework` `PluginManager`, keyed by protocol and
- * payload kind, and creates providers for location strings. It is also the
+ * payload kind, and creates providers for location strings or
+ * {@link StructuredLocation}s. It is also the
  * `ProviderResolver` handed to every provider it creates.
  */
 export class ProviderRegistry implements ProviderResolver {
@@ -115,7 +121,7 @@ export class ProviderRegistry implements ProviderResolver {
   }
 
   public createProviderForLocation(
-    location: string,
+    location: string | StructuredLocation,
     options?: { kind?: PayloadKind; domain?: string },
   ): Promise<ResolvedProvider> {
     return this.#resolve(location, options, 0);
@@ -126,12 +132,12 @@ export class ProviderRegistry implements ProviderResolver {
    * (kind, domain) and payload type, or a converter.
    */
   public async createProvidersForTransfer(
-    source: string,
-    dest: string,
+    source: string | StructuredLocation,
+    dest: string | StructuredLocation,
     options?: { kind?: PayloadKind },
   ): Promise<TransferProviders> {
-    const sourceProtocol = detectProtocol(source);
-    const destProtocol = detectProtocol(dest);
+    const sourceProtocol = protocolOf(source);
+    const destProtocol = protocolOf(dest);
     const sourceFactories = this.#factoriesFor(sourceProtocol, options?.kind);
     const destFactories = this.#factoriesFor(destProtocol, options?.kind);
     const negotiation = negotiateTransfer(
@@ -193,14 +199,14 @@ export class ProviderRegistry implements ProviderResolver {
   }
 
   async #resolve(
-    location: string,
+    location: string | StructuredLocation,
     options: { kind?: PayloadKind; domain?: string } | undefined,
     depth: number,
   ): Promise<ResolvedProvider> {
     if (depth > MAX_RESOLUTION_DEPTH) {
       throw new PermanentIOError("provider resolution too deep");
     }
-    const protocol = detectProtocol(location);
+    const protocol = protocolOf(location);
     this.#factoriesFor(protocol, options?.kind);
     const factory = this.getFactory(protocol, options?.kind) as IOProviderFactory;
     let domain: string | undefined;
@@ -218,11 +224,13 @@ export class ProviderRegistry implements ProviderResolver {
 
   async #instantiate(
     factory: IOProviderFactory,
-    location: string,
+    location: string | StructuredLocation,
     domain: string | undefined,
     depth: number,
   ): Promise<ResolvedProvider> {
-    const parsed = factory.locationSchema.parse(factory.parseLocationString(location));
+    const raw =
+      typeof location === "string" ? factory.parseLocationString(location) : location.location;
+    const parsed = factory.locationSchema.parse(raw);
     const { config, target } = factory.toProviderInputs(parsed);
     const resolver: ProviderResolver = {
       createProviderForLocation: (inner, opts) =>

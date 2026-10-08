@@ -1,6 +1,7 @@
 import {
   type IOProvider,
   type Item,
+  type MultipartWriter,
   type Part,
   type RangeReadable,
   type StreamHandle,
@@ -18,9 +19,11 @@ import { rangeReadableMultipartReader } from "./rangeReadableMultipartReader.ts"
 export interface MultipartTransferInput {
   readonly readable: StreamHandle & RangeReadable;
   readonly sink: IOProvider;
-  readonly writer: { write(parts: AsyncIterable<Part>): Promise<void> };
+  readonly writer: MultipartWriter;
   readonly totalBytes: number;
   readonly partSize: number;
+  /** Where a resumed upload continues: parts start at the part containing this offset. */
+  readonly startOffset?: number;
   readonly limiter: ConcurrencyLimiter;
   readonly context: EntryContext;
 }
@@ -30,13 +33,15 @@ export interface MultipartTransferInput {
  * writer, bounded by `limiter`. A part whose read fails with a
  * `TransientIOError` is re-read on its own, up to `retry.maxRetries` times,
  * within the same upload. `stop` ends the transfer after the parts already
- * started; `signal` aborts it.
+ * started; `signal` aborts it. Reported bytes include the parts before
+ * `startOffset`.
  */
 export async function multipartTransfer(input: MultipartTransferInput): Promise<EntryOutcome> {
   const { readable, sink, writer, totalBytes, partSize, limiter, context } = input;
   const { options, hooks, operationId, type } = context;
   const retry = options.retry ?? DEFAULT_RETRY;
-  let bytes = 0;
+  const firstOffset = Math.floor((input.startOffset ?? 0) / partSize) * partSize;
+  let bytes = firstOffset;
   let items = 0;
   let stopped = false;
 
@@ -103,7 +108,12 @@ export async function multipartTransfer(input: MultipartTransferInput): Promise<
   }
 
   async function* sourceParts(): AsyncGenerator<Part> {
-    for await (const part of rangeReadableMultipartReader(readable, totalBytes, partSize)) {
+    for await (const part of rangeReadableMultipartReader(
+      readable,
+      totalBytes,
+      partSize,
+      firstOffset,
+    )) {
       if (options.signal?.aborted) throw createAbortError();
       if (options.stop?.aborted) {
         stopped = true;

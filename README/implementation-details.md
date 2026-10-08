@@ -104,7 +104,10 @@ Only `TransientIOError`s are retried, up to `retry.maxRetries` with
 `retry.backoffMs` between attempts:
 
 - Multipart: a part whose read fails is re-read with `readRange` on its own,
-  within the same upload.
+  within the same upload. When the upload itself fails and the multipart
+  writer exposes `resumeToken()`, a new writer is created with
+  `getMultipartWriter(key, partSize, { resume })` and only the parts from
+  the token's `offset` on are sent again. Otherwise the upload restarts.
 - Bounded stream: if the source is `RangeReadable` and the writable handle
   exposes `resumeToken()`, the sink is reopened with
   `getWritableStream(key, { resume })` and the source re-read from the
@@ -363,10 +366,10 @@ sequenceDiagram
     participant SF as source factory
     participant DF as dest factory
     H->>R: createProvidersForTransfer(source, dest, { kind? })
-    R->>R: detectProtocol(source), detectProtocol(dest)
+    R->>R: protocol of source and dest (detectProtocol for strings)
     R->>N: factories for both protocols, converters, kind
     N-->>R: (factory, kind, domain) per side, converter?, path
-    R->>SF: locationSchema.parse(parseLocationString(source))
+    R->>SF: locationSchema.parse(parseLocationString(source) or source.location)
     R->>SF: toProviderInputs(location)
     R->>SF: createProvider(config, { domain, resolver })
     SF-->>R: source provider

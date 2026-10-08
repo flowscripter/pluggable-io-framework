@@ -4,6 +4,7 @@ export * from "./src/decorators/locallyCached.ts";
 export * from "./src/decorators/seekable.ts";
 export * from "./src/registry/detectProtocol.ts";
 export * from "./src/registry/ProviderRegistry.ts";
+export * from "./src/registry/StructuredLocation.ts";
 export * from "./src/retry/RetryOptions.ts";
 export * from "./src/retry/withRetry.ts";
 export * from "./src/transfer/copyMove.ts";

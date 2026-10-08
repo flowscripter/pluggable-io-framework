@@ -225,6 +225,35 @@ describe("ProviderRegistry.createProvidersForTransfer", () => {
     );
   });
 
+  test("a structured location is validated by the schema without parsing a string", async () => {
+    const registry = await registryOf([makeFakeFactory({ protocol: "s3" })]);
+    const resolved = await registry.createProviderForLocation({
+      protocol: "s3",
+      location: { key: "s3://kept" },
+    });
+    expect(resolved.target).toEqual({ kind: "entry", key: "s3://kept" });
+    await expect(
+      registry.createProviderForLocation({ protocol: "s3", location: {} }),
+    ).rejects.toThrow();
+    await expect(
+      registry.createProviderForLocation({ protocol: "nope", location: { key: "a" } }),
+    ).rejects.toThrow('No provider for protocol "nope"');
+  });
+
+  test("negotiates a transfer between a structured and a string location", async () => {
+    const registry = await registryOf([
+      makeFakeFactory({ protocol: "file" }),
+      makeFakeFactory({ protocol: "s3" }),
+    ]);
+    const result = await registry.createProvidersForTransfer(
+      { protocol: "file", location: { key: "a.txt" } },
+      "s3://b",
+    );
+    expect(result.source.target).toEqual({ kind: "entry", key: "a.txt" });
+    expect(result.dest.target).toEqual({ kind: "entry", key: "b" });
+    expect(result.options.path).toBe("file/js -> s3/js");
+  });
+
   test("disposes the source provider when the destination cannot be created", async () => {
     const events: string[] = [];
     const failing: IOProviderFactory = {

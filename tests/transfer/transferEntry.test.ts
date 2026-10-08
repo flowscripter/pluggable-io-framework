@@ -100,6 +100,54 @@ describe("transferEntry", () => {
     expect(streamed.path).toBe("js -> js, stream");
   });
 
+  test("a failed multipart write resumes from the writer's token, or restarts without one", async () => {
+    const partSizeConstraints = () => ({
+      minPartSize: 1,
+      maxPartSize: 4,
+      maxParts: 100,
+      defaultPartSize: 4,
+    });
+    const failOnce = () => {
+      let failed = false;
+      return (_path: string, offset: number) => {
+        if (offset === 4 && !failed) {
+          failed = true;
+          throw new TransientIOError("part write failed");
+        }
+      };
+    };
+    const options = { multipartThreshold: 1, retry: noBackoff };
+
+    const resumable = setup(
+      {},
+      { multipart: true, resumable: true, partSizeConstraints, onWrite: failOnce() },
+    );
+    const result = await run(resumable.source, resumable.sink, { options });
+    expect(readText(resumable.sinkStore, "b.txt")).toBe("hello world");
+    expect(result.bytes).toBe(11);
+    expect(resumable.sinkStore.events).toEqual([
+      "multipart:b.txt:start",
+      "part:b.txt:0",
+      "part:b.txt:1",
+      "multipart:b.txt:resume",
+      "part:b.txt:1",
+      "part:b.txt:2",
+    ]);
+
+    const restarting = setup({}, { multipart: true, partSizeConstraints, onWrite: failOnce() });
+    await run(restarting.source, restarting.sink, { options });
+    expect(readText(restarting.sinkStore, "b.txt")).toBe("hello world");
+    expect(restarting.sinkStore.events).toEqual([
+      "multipart:b.txt:start",
+      "part:b.txt:0",
+      "part:b.txt:1",
+      "multipart:b.txt:start",
+      "part:b.txt:0",
+      "part:b.txt:1",
+      "part:b.txt:2",
+    ]);
+  });
+
   test("fails a kind mismatch without a converter, and applies a converter per item", async () => {
     const { source } = setup({ itemSize: 4 });
     const nativeSink = makeRecordingSink(PayloadKind.Native);
