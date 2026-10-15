@@ -148,6 +148,15 @@ deletes each entry after it is transferred.
 Child keys are built with the provider's `joinKey`, defaulting to a
 `/`-join.
 
+Every listed entry path is validated before it is joined onto the
+destination, in both recursive and pattern transfers:
+
+- empty, absolute, drive-letter, backslash and NUL-containing paths are
+  rejected;
+- paths with a `.` or `..` segment are rejected;
+- the joined destination key must stay under the destination root;
+- a rejected path fails the transfer with a `PermanentIOError`.
+
 ## Concurrency
 
 Multipart parts and recursive or pattern entries are bounded by a

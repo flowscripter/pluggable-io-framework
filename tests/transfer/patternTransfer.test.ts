@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { PermanentIOError, type IOProvider } from "@flowscripter/pluggable-io-framework-api";
 import { copy, move } from "../../src/transfer/copyMove.ts";
 import { patternTransfer } from "../../src/transfer/patternTransfer.ts";
 import { makeMemoryProvider, makeStore, readText } from "../fixtures/memoryProvider.ts";
@@ -61,4 +62,47 @@ describe("patternTransfer", () => {
       "does not support listing",
     );
   });
+});
+
+describe("patternTransfer - entry path validation", () => {
+  const BAD: [string, string][] = [
+    ["empty", ""],
+    ["absolute", "/etc/x"],
+    ["drive-letter", "C:/x"],
+    ["backslash", "a\\b"],
+    ["NUL", "a\0b"],
+    ["parent segment", "../x"],
+    ["nested parent segment", "a/../../x"],
+    ["dot segment", "a/./b"],
+  ];
+
+  for (const type of ["copy", "move"] as const) {
+    const run = type === "copy" ? copy : move;
+
+    test(`${type} accepts normal names`, async () => {
+      const { source, sink, sinkStore } = setup();
+      await run(source, pattern("dir", "*.md"), sink, container("out"));
+      expect([...sinkStore.files.keys()]).toEqual(["out/c.md"]);
+    });
+
+    for (const [name, path] of BAD) {
+      test(`${type} rejects ${name} entry path and writes nothing`, async () => {
+        const { source, sink, sinkStore, sourceStore } = setup();
+        const properties = await source.getProperties("dir/a.txt");
+        const evil = {
+          ...source,
+          async *list() {
+            yield { path, properties };
+          },
+        } as IOProvider;
+        const error = (await run(evil, pattern("dir", "*"), sink, container("out")).catch(
+          (e: unknown) => e,
+        )) as Error;
+        expect(error).toBeInstanceOf(PermanentIOError);
+        expect(error.message).toContain("Unsafe entry path");
+        expect(sinkStore.files.size).toBe(0);
+        expect(sourceStore.files.has("dir/a.txt")).toBe(true);
+      });
+    }
+  }
 });

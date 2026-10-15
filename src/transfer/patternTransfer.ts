@@ -6,6 +6,7 @@ import {
 import { defaultConcurrencyLimiter } from "../concurrency/ConcurrencyLimiter.ts";
 import { mapAsyncIterableConcurrently } from "../concurrency/mapAsyncIterableConcurrently.ts";
 import { throwIfAborted } from "../util/abort.ts";
+import { joinEntryPath } from "../util/entryPath.ts";
 import { globToRegex } from "../util/globToRegex.ts";
 import { joinKey } from "../util/keys.ts";
 import { aggregateResults } from "./aggregateResults.ts";
@@ -54,13 +55,14 @@ export async function patternTransfer(
     if (options.stop?.aborted || entry.properties.isContainer) {
       return undefined;
     }
+    const destKey = joinEntryPath(sink, destContainerKey, entry.path);
     discovered += 1;
     reportProgress();
     const result = await transferEntry({
       source,
       sourceKey: joinKey(source, containerKey, entry.path),
       sink,
-      destKey: joinKey(sink, destContainerKey, entry.path),
+      destKey,
       properties: entry.properties,
       options,
       parentOperationId: operationId,

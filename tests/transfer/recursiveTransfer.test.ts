@@ -349,3 +349,53 @@ describe("recursive direct transfer - class-based provider", () => {
     expect(readText(store, "dest/src/a.txt")).toBe("A");
   });
 });
+
+describe("recursive transfer - entry path validation", () => {
+  const BAD: [string, string][] = [
+    ["empty", ""],
+    ["absolute", "/etc/x"],
+    ["drive-letter", "C:/x"],
+    ["backslash", "a\\b"],
+    ["NUL", "a\0b"],
+    ["parent segment", "../x"],
+    ["nested parent segment", "a/../../x"],
+    ["dot segment", "a/./b"],
+  ];
+
+  function listing(store: MemoryStore, paths: string[]) {
+    const provider = makeMemoryProvider(store);
+    return {
+      ...provider,
+      async *list() {
+        const properties = await provider.getProperties("src/a.txt");
+        for (const path of paths) yield { path, properties };
+      },
+    } as IOProvider;
+  }
+
+  for (const type of ["copy", "move"] as const) {
+    const run = type === "copy" ? copy : move;
+
+    test(`${type} accepts normal nested paths`, async () => {
+      const store = makeStore({ "src/a.txt": "A", "src/n/m/b.txt": "B" });
+      const provider = makeMemoryProvider(store);
+      await run(provider, container("src"), provider, container("dest"));
+      expect(readText(store, "dest/a.txt")).toBe("A");
+      expect(readText(store, "dest/n/m/b.txt")).toBe("B");
+    });
+
+    for (const [name, path] of BAD) {
+      test(`${type} rejects ${name} entry path and writes nothing`, async () => {
+        const store = makeStore({ "src/a.txt": "A" });
+        const sinkStore = makeStore();
+        const source = listing(store, [path]);
+        const sink = makeMemoryProvider(sinkStore);
+        const error = await rejection(run(source, container("src"), sink, container("dest")));
+        expect(error).toBeInstanceOf(PermanentIOError);
+        expect(error.message).toContain("Unsafe entry path");
+        expect(sinkStore.files.size).toBe(0);
+        expect(store.files.has("src/a.txt")).toBe(true);
+      });
+    }
+  }
+});
