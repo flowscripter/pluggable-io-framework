@@ -4,7 +4,9 @@ import type { IOProvider } from "@flowscripter/pluggable-io-framework-api";
 export function defaultJoinKey(containerKey: string, name: string): string {
   if (name === "") return containerKey;
   if (containerKey === "") return name;
-  return `${containerKey.replace(/\/+$/, "")}/${name}`;
+  let end = containerKey.length;
+  while (end > 0 && containerKey.charCodeAt(end - 1) === 47) end--;
+  return `${containerKey.slice(0, end)}/${name}`;
 }
 
 /** Joins a child name onto a container key using the provider's own rule. */
