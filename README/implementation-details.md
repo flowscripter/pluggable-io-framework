@@ -154,6 +154,8 @@ destination, in both recursive and pattern transfers:
 - empty, absolute, drive-letter, backslash and NUL-containing paths are
   rejected;
 - paths with a `.` or `..` segment are rejected;
+- empty interior segments are dropped (`a//b` becomes `a/b`) and a trailing
+  slash is kept, so every destination provider sees the same key;
 - the joined destination key must stay under the destination root;
 - a rejected path fails the transfer with a `PermanentIOError`.
 

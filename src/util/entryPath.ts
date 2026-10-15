@@ -16,6 +16,13 @@ export function assertSafeEntryPath(path: string): void {
   }
 }
 
+/** Drops empty interior segments (`a//b` -> `a/b`); a trailing slash is kept. */
+function dropEmptyInteriorSegments(path: string): string {
+  const segments = path.split("/");
+  const last = segments.pop() as string;
+  return [...segments.filter((segment) => segment !== ""), last].join("/");
+}
+
 function collapse(key: string): string[] {
   const out: string[] = [];
   for (const segment of key.replace(/\\/g, "/").split("/")) {
@@ -27,13 +34,13 @@ function collapse(key: string): string[] {
 }
 
 /**
- * Validates an entry path from a source listing and joins it onto `rootKey`
- * using the sink's `joinKey`, then checks the result is strictly inside
+ * Validates an entry path from a source listing, drops its empty interior
+ * segments, and joins it onto `rootKey` using the sink's `joinKey`, then checks the result is strictly inside
  * `rootKey` independently of how the provider joins.
  */
 export function joinEntryPath(sink: IOProvider, rootKey: string, entryPath: string): string {
   assertSafeEntryPath(entryPath);
-  const joined = joinKey(sink, rootKey, entryPath);
+  const joined = joinKey(sink, rootKey, dropEmptyInteriorSegments(entryPath));
   const root = collapse(rootKey);
   const target = collapse(joined);
   if (target.length <= root.length || root.some((segment, i) => target[i] !== segment)) {
