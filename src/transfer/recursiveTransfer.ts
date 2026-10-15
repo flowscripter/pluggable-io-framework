@@ -8,6 +8,7 @@ import { mapAsyncIterableConcurrently } from "../concurrency/mapAsyncIterableCon
 import { DEFAULT_RETRY } from "../retry/RetryOptions.ts";
 import { withRetry } from "../retry/withRetry.ts";
 import { throwIfAborted } from "../util/abort.ts";
+import { joinEntryPath } from "../util/entryPath.ts";
 import { baseName, joinKey } from "../util/keys.ts";
 import { aggregateResults } from "./aggregateResults.ts";
 import { basePath, transferEntry } from "./transferEntry.ts";
@@ -103,9 +104,9 @@ export async function recursiveTransfer(
     if (options.stop?.aborted) {
       return undefined;
     }
+    const entryDestKey = joinEntryPath(sink, resolvedDestRoot, entry.path);
     discovered += 1;
     reportProgress();
-    const entryDestKey = joinKey(sink, resolvedDestRoot, entry.path);
     let result: TransferResult | undefined;
     if (entry.properties.isContainer) {
       await sink.createContainer?.(entryDestKey);
