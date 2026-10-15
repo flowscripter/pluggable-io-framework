@@ -105,4 +105,45 @@ describe("patternTransfer - entry path validation", () => {
       });
     }
   }
+
+  for (const type of ["copy", "move"] as const) {
+    const run = type === "copy" ? copy : move;
+    const joiners: [string, (root: string, name: string) => string][] = [
+      ["plain joinKey", (root, name) => `${root.replace(/\/+$/, "")}/${name}`],
+      ["joinKey keeping //", (root, name) => `${root}/${name}`],
+    ];
+
+    for (const [label, joinKey] of joiners) {
+      test(`${type} rewrites a//b to a/b (${label})`, async () => {
+        const { source, sourceStore, sinkStore } = setup();
+        sourceStore.files.set("dir/x//a.txt", new TextEncoder().encode("X"));
+        const sink = { ...makeMemoryProvider(sinkStore), joinKey } as IOProvider;
+        const properties = await source.getProperties("dir/x//a.txt");
+        const listed = {
+          ...source,
+          async *list() {
+            yield { path: "x//a.txt", properties };
+          },
+        } as IOProvider;
+        await run(listed, pattern("dir", "*"), sink, container("out"));
+        expect([...sinkStore.files.keys()]).toEqual(["out/x/a.txt"]);
+      });
+    }
+
+    test(`${type} rejects an entry path of only slashes`, async () => {
+      const { source, sink, sinkStore } = setup();
+      const properties = await source.getProperties("dir/a.txt");
+      const evil = {
+        ...source,
+        async *list() {
+          yield { path: "//", properties };
+        },
+      } as IOProvider;
+      const error = (await run(evil, pattern("dir", "*"), sink, container("out")).catch(
+        (e: unknown) => e,
+      )) as Error;
+      expect(error).toBeInstanceOf(PermanentIOError);
+      expect(sinkStore.files.size).toBe(0);
+    });
+  }
 });

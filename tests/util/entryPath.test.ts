@@ -25,6 +25,18 @@ describe("entryPath", () => {
     expect(joinEntryPath(sink, "", "a..b/..c")).toBe("a..b/..c");
   });
 
+  test("drops empty interior segments and keeps a trailing slash", () => {
+    expect(joinEntryPath(sink, "out", "a//b")).toBe("out/a/b");
+    expect(joinEntryPath(sink, "out", "a///b//c.txt")).toBe("out/a/b/c.txt");
+    expect(joinEntryPath(sink, "out", "d/")).toBe("out/d/");
+    expect(joinEntryPath(sink, "out", "a//d/")).toBe("out/a/d/");
+  });
+
+  test("rejects a path made only of slashes", () => {
+    expect(() => joinEntryPath(sink, "out", "//")).toThrow("Unsafe entry path");
+    expect(() => joinEntryPath(sink, "out", "///")).toThrow("Unsafe entry path");
+  });
+
   for (const [name, path] of BAD_PATHS) {
     test(`rejects ${name}`, () => {
       expect(() => assertSafeEntryPath(path)).toThrow("Unsafe entry path");

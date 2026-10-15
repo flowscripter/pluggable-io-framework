@@ -398,4 +398,33 @@ describe("recursive transfer - entry path validation", () => {
       });
     }
   }
+
+  for (const type of ["copy", "move"] as const) {
+    const run = type === "copy" ? copy : move;
+    const joiners: [string, (root: string, name: string) => string][] = [
+      ["plain joinKey", (root, name) => `${root.replace(/\/+$/, "")}/${name}`],
+      ["joinKey keeping //", (root, name) => `${root}/${name}`],
+    ];
+
+    for (const [label, joinKey] of joiners) {
+      test(`${type} rewrites a//b to a/b (${label})`, async () => {
+        const store = makeStore({ "src/a.txt": "A", "src/a//b": "B" });
+        const sinkStore = makeStore();
+        const source = listing(store, ["a//b"]);
+        const sink = { ...makeMemoryProvider(sinkStore), joinKey } as IOProvider;
+        await run(source, container("src"), sink, container("dest"));
+        expect([...sinkStore.files.keys()]).toEqual(["dest/a/b"]);
+      });
+    }
+
+    test(`${type} rejects an entry path of only slashes`, async () => {
+      const store = makeStore({ "src/a.txt": "A" });
+      const sinkStore = makeStore();
+      const source = listing(store, ["//"]);
+      const sink = makeMemoryProvider(sinkStore);
+      const error = await rejection(run(source, container("src"), sink, container("dest")));
+      expect(error).toBeInstanceOf(PermanentIOError);
+      expect(sinkStore.files.size).toBe(0);
+    });
+  }
 });
