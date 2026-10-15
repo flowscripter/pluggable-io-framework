@@ -9,6 +9,22 @@ describe("keys", () => {
     expect(defaultJoinKey("a", "")).toBe("a");
   });
 
+  test("defaultJoinKey strips every trailing slash", () => {
+    expect(defaultJoinKey("a///", "b")).toBe("a/b");
+    expect(defaultJoinKey("/", "b")).toBe("/b");
+    expect(defaultJoinKey("//", "b")).toBe("/b");
+    expect(defaultJoinKey("a/b", "c")).toBe("a/b/c");
+  });
+
+  test("defaultJoinKey completes quickly on very long slash runs", () => {
+    const start = performance.now();
+    expect(defaultJoinKey("a" + "/".repeat(1_000_000) + "x", "b")).toBe(
+      "a" + "/".repeat(1_000_000) + "x/b",
+    );
+    expect(defaultJoinKey("a" + "/".repeat(1_000_000), "b")).toBe("a/b");
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+
   test("joinKey prefers the provider's own rule", () => {
     const provider = makeMemoryProvider(makeStore());
     expect(joinKey(provider, "a", "b")).toBe("a/b");
