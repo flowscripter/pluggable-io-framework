@@ -5,11 +5,11 @@
     "": {
       "name": "@flowscripter/pluggable-io-framework",
       "dependencies": {
-        "@flowscripter/dynamic-plugin-framework": "^2.3.6",
-        "@flowscripter/pluggable-io-framework-api": "^3.1.11",
+        "@flowscripter/dynamic-plugin-framework": "^2.3.7",
+        "@flowscripter/pluggable-io-framework-api": "^3.1.12",
       },
       "devDependencies": {
-        "@types/bun": "^1.4.4",
+        "@types/bun": "^1.4.5",
         "oxfmt": "0.79.0",
         "oxlint": "1.94.0",
         "zod": "^4.6.7",
@@ -20,9 +20,9 @@
     },
   },
   "packages": {
-    "@flowscripter/dynamic-plugin-framework": ["@flowscripter/dynamic-plugin-framework@2.3.6", "", { "dependencies": { "semver": "^7.8.6" }, "peerDependencies": { "typescript": "^7.0.2" } }, "sha512-K5mJ7yzyX0BA7WkFII9atQ8rUQPKoKgKUPgah0Njm3AqAbeS7NXFRwivtjdt3gE383VsgfulTe73xHQUJT2ceQ=="],
+    "@flowscripter/dynamic-plugin-framework": ["@flowscripter/dynamic-plugin-framework@2.3.7", "", { "dependencies": { "semver": "^7.8.6" }, "peerDependencies": { "typescript": "^7.0.2" } }, "sha512-UC+frxaUGP/wsbxOjQVOLmw2snZyezlt0sP2PfVBtB3HEl+ON+hnxVMpgnB1bkiqxACqLVp0NpfZB6dC9YsemA=="],
 
-    "@flowscripter/pluggable-io-framework-api": ["@flowscripter/pluggable-io-framework-api@3.1.11", "", { "dependencies": { "zod": "^4.6.7", "zod-to-json-schema": "^3.25.2" }, "peerDependencies": { "typescript": "^7.0.2" } }, "sha512-Z1rddl9akrlCurxGTZLPcRKH52eVqoNwH0GSjlyMYsZ9WuVMTXBE+M1jzgvFWqOEIUcyycYUyYIJLBWe73cHww=="],
+    "@flowscripter/pluggable-io-framework-api": ["@flowscripter/pluggable-io-framework-api@3.1.12", "", { "dependencies": { "zod": "^4.6.7", "zod-to-json-schema": "^3.25.2" }, "peerDependencies": { "typescript": "^7.0.2" } }, "sha512-kDGiN4goydnlCQQDDYpna9pVsnocw2oszusJ7h4G2VY/NxdnpItfgt9Kn8pWxVTU/7PCcAfoeNaWQlF06Vom3A=="],
 
     "@oxfmt/binding-android-arm-eabi": ["@oxfmt/binding-android-arm-eabi@0.79.0", "", { "os": "android", "cpu": "arm" }, "sha512-xOCQ/rvokUXs8SxOQY5Wy2ukPaZJZ0PmdJovN0ryB1c8DVEtbcvliLdYtINUYh8QOTpmBOctIisSJk9tvh+J6w=="],
 
@@ -100,7 +100,7 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.94.0", "", { "os": "win32", "cpu": "x64" }, "sha512-I3eZdd4bemIJQDNv9XDV/FEofDxIoN32tzCv98wIgLdW05EqxZb5hF4AwPrRzHD/dQhl0n7KgPy5AQPfM0HWrA=="],
 
-    "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+    "@types/bun": ["@types/bun@1.4.5", "", { "dependencies": { "bun-types": "1.4.5" } }, "sha512-DpgwNI9z0L1S0gtb45QLCWgwCUcMLnsHYMJHQvpNj7erGiCGBvpggltAIeARrtobNMKMuy0UP7i56tKKgwFs/Q=="],
 
     "@types/node": ["@types/node@26.6.6", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog=="],
 
@@ -144,7 +144,7 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
-    "bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+    "bun-types": ["bun-types@1.4.5", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-ECHn+9dhL3wv0G6u0+7dQvrnaimXiRDxxerYBmhTaLyJEEuvTPWk2Fye3XIf5Y++JIIiHKfQw4Z7V5D8KuiXbg=="],
 
     "oxfmt": ["oxfmt@0.79.0", "", { "dependencies": { "tinypool": "2.2.0" }, "optionalDependencies": { "@oxfmt/binding-android-arm-eabi": "0.79.0", "@oxfmt/binding-android-arm64": "0.79.0", "@oxfmt/binding-darwin-arm64": "0.79.0", "@oxfmt/binding-darwin-x64": "0.79.0", "@oxfmt/binding-freebsd-x64": "0.79.0", "@oxfmt/binding-linux-arm-gnueabihf": "0.79.0", "@oxfmt/binding-linux-arm-musleabihf": "0.79.0", "@oxfmt/binding-linux-arm64-gnu": "0.79.0", "@oxfmt/binding-linux-arm64-musl": "0.79.0", "@oxfmt/binding-linux-ppc64-gnu": "0.79.0", "@oxfmt/binding-linux-riscv64-gnu": "0.79.0", "@oxfmt/binding-linux-riscv64-musl": "0.79.0", "@oxfmt/binding-linux-s390x-gnu": "0.79.0", "@oxfmt/binding-linux-x64-gnu": "0.79.0", "@oxfmt/binding-linux-x64-musl": "0.79.0", "@oxfmt/binding-openharmony-arm64": "0.79.0", "@oxfmt/binding-win32-arm64-msvc": "0.79.0", "@oxfmt/binding-win32-ia32-msvc": "0.79.0", "@oxfmt/binding-win32-x64-msvc": "0.79.0" }, "peerDependencies": { "@astrojs/compiler-rs": "^0.5.0", "svelte": "^5.0.0", "vite-plus": "*" }, "optionalPeers": ["@astrojs/compiler-rs", "svelte", "vite-plus"], "bin": { "oxfmt": "bin/oxfmt" } }, "sha512-92iLHGxAgtYk6jLp/1ZBnEeABveNduHZgMDQj7tyqO9iafuJG3q+YHJq0R5Aa4YT+E6xswMQXdmPZYMwynS8ig=="],
 
